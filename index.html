@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Resume Composer</title>
+<meta name="description" content="Import a resume, rearrange it as cards, tune it against a job description, and export to PDF, Word, Markdown or plain text.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23171717'/><rect x='9' y='7' width='14' height='18' rx='2' fill='%23fafafa'/><rect x='12' y='11' width='8' height='1.6' fill='%23171717'/><rect x='12' y='15' width='8' height='1.6' fill='%23999'/><rect x='12' y='19' width='5' height='1.6' fill='%23999'/></svg>">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/cards.css">
+<link rel="stylesheet" href="css/preview.css">
+<link rel="stylesheet" href="css/templates.css">
+<link rel="stylesheet" href="css/print.css" media="all">
+</head>
+<body>
+
+<a class="skip-link" href="#dock-left">Skip to resume sections</a>
+
+<div class="app" id="app" hidden>
+  <header class="topbar">
+    <div class="topbar-group">
+      <span class="brand" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/><path d="M14 3v5h5"/><path d="M9.5 12.5h6M9.5 16h4"/>
+        </svg>
+      </span>
+      <button class="doc-name" id="doc-name-btn" title="Rename this version">
+        <span id="doc-name-text">Untitled resume</span>
+        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+      </button>
+      <span class="save-state" id="save-state" role="status" aria-live="polite"></span>
+    </div>
+
+    <div class="topbar-group topbar-center">
+      <button class="cmd-hint" id="palette-btn" title="Command palette">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <span>Search or run a command</span>
+        <kbd>Ctrl K</kbd>
+      </button>
+    </div>
+
+    <div class="topbar-group topbar-end">
+      <button class="icon-btn" id="undo-btn" title="Undo (Ctrl Z)" aria-label="Undo" disabled></button>
+      <button class="icon-btn" id="redo-btn" title="Redo (Ctrl Shift Z)" aria-label="Redo" disabled></button>
+      <span class="topbar-rule" aria-hidden="true"></span>
+      <button class="btn btn-quiet" id="import-btn">Import</button>
+      <button class="btn btn-primary" id="export-btn">Export</button>
+      <button class="icon-btn" id="theme-btn" title="Appearance" aria-label="Appearance"></button>
+    </div>
+  </header>
+
+  <main class="stage" id="stage">
+    <div class="canvas-scroll" id="canvas-scroll" tabindex="0">
+      <div class="canvas" id="canvas"></div>
+      <pre class="ats-out" id="ats-out" hidden></pre>
+    </div>
+
+    <section class="dock dock-left" id="dock-left" aria-label="Resume sections">
+      <header class="dock-head">
+        <button class="dock-toggle" id="dock-left-toggle" aria-expanded="true" aria-controls="dock-left-body" title="Collapse sections">
+          <svg class="dock-chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+          <span class="dock-title">Sections</span>
+        </button>
+        <span class="dock-count" id="dock-left-count"></span>
+        <button class="icon-btn sm" id="collapse-all-btn" title="Collapse or expand every card" aria-label="Collapse or expand every card"></button>
+      </header>
+      <div class="dock-body" id="dock-left-body">
+        <div class="cards" id="cards" role="list"></div>
+      </div>
+    </section>
+
+    <section class="dock dock-right" id="dock-right" aria-label="Tools">
+      <header class="dock-head">
+        <button class="dock-toggle" id="dock-right-toggle" aria-expanded="true" aria-controls="dock-right-body" title="Collapse tools">
+          <svg class="dock-chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>
+          <span class="dock-title" id="dock-right-title">Library</span>
+        </button>
+      </header>
+      <nav class="dock-tabs" id="dock-tabs" role="tablist" aria-label="Tool panels"></nav>
+      <div class="dock-body" id="dock-right-body">
+        <div class="panel" id="panel"></div>
+      </div>
+    </section>
+
+    <div class="viewbar" id="viewbar">
+      <div class="seg" role="group" aria-label="Preview mode">
+        <button class="seg-btn is-on" data-view="paper">Page</button>
+        <button class="seg-btn" data-view="ats">ATS text</button>
+      </div>
+      <span class="viewbar-rule" aria-hidden="true"></span>
+      <button class="icon-btn sm" id="zoom-out" aria-label="Zoom out"></button>
+      <select id="zoom-select" class="zoom-select" aria-label="Zoom level">
+        <option value="0.5">50%</option>
+        <option value="0.75">75%</option>
+        <option value="1" selected>100%</option>
+        <option value="1.25">125%</option>
+        <option value="fit">Fit</option>
+      </select>
+      <button class="icon-btn sm" id="zoom-in" aria-label="Zoom in"></button>
+      <span class="viewbar-rule" aria-hidden="true"></span>
+      <span class="viewbar-meta" id="canvas-meta"></span>
+    </div>
+  </main>
+</div>
+
+<div class="boot" id="boot">
+  <div class="boot-inner">
+    <span class="boot-mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/><path d="M14 3v5h5"/><path d="M9.5 12.5h6M9.5 16h4"/>
+      </svg>
+    </span>
+    <p>Loading</p>
+    <noscript><p class="boot-error">This application needs JavaScript enabled.</p></noscript>
+  </div>
+</div>
+
+<input type="file" id="file-input" accept=".pdf,.docx,.tex,.latex,.txt,.md,.markdown" multiple hidden>
+
+<div class="drop-veil" id="drop-veil" hidden aria-hidden="true">
+  <div class="drop-veil-card">
+    <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+    <strong>Drop to import</strong>
+    <span>PDF, Word, LaTeX, Markdown or plain text</span>
+  </div>
+</div>
+
+<div class="toasts" id="toasts" role="region" aria-label="Notifications" aria-live="polite"></div>
+<div class="overlays" id="overlays"></div>
+<div class="sr-only" id="live-region" role="status" aria-live="polite" aria-atomic="true"></div>
+
+<div class="print-root" id="print-root" aria-hidden="true"></div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+# editor and tooling config
+.vscode/
+.idea/
+*.code-workspace
+
+# scratch files used while testing importers
+_fixture.*
+
+# os cruft
+Thumbs.db
+desktop.ini
+.DS_Store
