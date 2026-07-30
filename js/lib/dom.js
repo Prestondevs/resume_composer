@@ -38,7 +38,9 @@ export function h(tag, props, ...children) {
 
 export function append(parent, children) {
   for (const child of children.flat(Infinity)) {
-    if (child == null || child === false) continue;
+    // callers guard with `cond && node`, so a falsy guard arrives here as false, 0, "" or
+    // nullish. all of those mean "render nothing"; without this a count of 0 prints as "0"
+    if (child == null || child === false || child === "" || child === 0) continue;
     parent.appendChild(typeof child === "object" ? child : document.createTextNode(String(child)));
   }
   return parent;

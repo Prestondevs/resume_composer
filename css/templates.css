@@ -349,3 +349,17 @@
 /* density control applied on top of any template */
 .r-doc[data-density="tight"] { --r-lead: 1.28; --r-gap: 8pt; --r-entry-gap: 5pt; }
 .r-doc[data-density="roomy"] { --r-lead: 1.55; --r-gap: 15pt; --r-entry-gap: 10pt; }
+
+/* a rule under every section heading, forced on or off regardless of the layout. imported
+   documents turn this on because most real resumes separate their sections this way */
+.r-doc[data-rules="on"] .r-head {
+  border-bottom: 0.75pt solid var(--r-rule-forced, #b9bec6);
+  padding-bottom: 2pt;
+  margin-bottom: 5pt;
+}
+.r-doc[data-rules="on"] .r-contact {
+  border-bottom: 0.75pt solid var(--r-rule-forced, #b9bec6);
+  padding-bottom: 7pt;
+}
+.r-doc[data-rules="off"] .r-head,
+.r-doc[data-rules="off"] .r-contact { border-bottom: 0; }

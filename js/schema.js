@@ -241,6 +241,8 @@ export function createDocument(patch = {}) {
       fonts: null,
       keepFonts: true,
       fontOverride: null,
+      // horizontal rule under each section heading: follow the layout, or force it on or off
+      sectionRules: "auto",
     },
     sections: [],
     trash: [],
@@ -336,6 +338,7 @@ export function normalizeDocument(input) {
   doc.settings.fonts = normalizeFonts(doc.settings.fonts);
   doc.settings.keepFonts = doc.settings.keepFonts !== false;
   doc.settings.fontOverride = fontChoice(doc.settings.fontOverride) ? doc.settings.fontOverride : null;
+  if (!["auto", "on", "off"].includes(doc.settings.sectionRules)) doc.settings.sectionRules = "auto";
   doc.job = { title: "", company: "", url: "", description: "", ...(doc.job || {}) };
   doc.warnings = Array.isArray(doc.warnings) ? doc.warnings : [];
   doc.trash = Array.isArray(doc.trash) ? doc.trash.slice(0, 40).map(normalizeSection) : [];
@@ -371,6 +374,16 @@ function normalizeFonts(input) {
     display: face(input.display),
     source: ["pdf", "docx", "latex", "text"].includes(input.source) ? input.source : null,
   };
+}
+
+// an entry's detail lines are newline separated so they render on the lines they came from
+function tidyDetailLines(value) {
+  return cleanText(value)
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join("\n")
+    .slice(0, 400);
 }
 
 function normalizeSection(input) {
@@ -411,7 +424,7 @@ function normalizeSection(input) {
       location: cleanText(item?.location).slice(0, 120),
       start: cleanText(item?.start).slice(0, 40),
       end: cleanText(item?.end).slice(0, 40),
-      meta: cleanText(item?.meta).slice(0, 300),
+      meta: tidyDetailLines(item?.meta),
       link: cleanText(item?.link).slice(0, 300),
       bullets: (Array.isArray(item?.bullets) ? item.bullets : [])
         .slice(0, 40)

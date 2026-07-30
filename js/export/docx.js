@@ -10,6 +10,9 @@ import { PAGE_SIZES, MARGINS, fontChoice } from "../schema.js";
 const TWIPS_PER_INCH = 1440;
 const inches = (value) => Math.round(value * TWIPS_PER_INCH);
 
+// detail lines are stored newline separated so each becomes its own paragraph
+const metaLines = (item) => String(item.meta || "").split(/\n+/).map((line) => line.trim()).filter(Boolean);
+
 const FONT_STACKS = {
   minimal: { body: "Georgia", display: "Georgia" },
   professional: { body: "Georgia", display: "Calibri" },
@@ -101,7 +104,9 @@ function renderSection(section, contentWidth) {
           tabs: [{ align: "right", pos: contentWidth }],
         }));
       }
-      if (item.meta) out.push(paragraph({ style: "EntryMeta", runs: [{ text: item.meta }] }));
+      for (const detail of metaLines(item)) {
+        out.push(paragraph({ style: "EntryMeta", runs: [{ text: detail }] }));
+      }
       if (item.link) out.push(paragraph({ style: "EntryMeta", runs: [{ text: item.link }] }));
       for (const bullet of item.bullets || []) {
         if (bullet.trim()) out.push(paragraph({ style: "ListBullet", numbered: true, runs: [{ text: bullet }] }));

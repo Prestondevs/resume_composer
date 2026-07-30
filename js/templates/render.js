@@ -126,13 +126,18 @@ function buildEntry(item, templateId) {
         item.title && h("span", { class: "r-title" }, item.title),
         item.org && h("span", { class: "r-org" }, item.org)),
       aside),
-    item.meta && h("div", { class: "r-meta" }, item.meta),
+    // detail lines keep the line structure they had in the source
+    ...metaLines(item).map((line) => h("div", { class: "r-meta" }, line)),
     item.link && h("div", null, h("a", { class: "r-link", href: absoluteUrl(item.link), rel: "noreferrer" }, displayUrl(item.link))),
-    item.bullets?.length && h("ul", { class: "r-bullets" }, item.bullets.filter(Boolean).map((line) => h("li", null, line))),
+    item.bullets?.some((line) => line.trim())
+      ? h("ul", { class: "r-bullets" }, item.bullets.filter((line) => line.trim()).map((line) => h("li", null, line)))
+      : null,
   );
 }
 
 const absoluteUrl = (url) => (/^https?:\/\//i.test(url) ? url : `https://${url}`);
+
+export const metaLines = (item) => String(item.meta || "").split("\n").map((line) => line.trim()).filter(Boolean);
 
 // returns the section element plus the child nodes pagination may split on
 function buildSection(section, doc) {
@@ -225,6 +230,7 @@ export function renderResume(doc, container) {
   container.className = "r-doc";
   container.dataset.template = doc.template;
   container.dataset.density = doc.settings.density || "normal";
+  container.dataset.rules = doc.settings.sectionRules || "auto";
   applyVars(container, docStyleVars(doc));
 
   const hasContent = rest.length > 0 || (contactSection && !isEmptyContact(contactSection));
@@ -236,8 +242,12 @@ export function renderResume(doc, container) {
 
   // measure a full-height layout, then cut it into pages
   const host = getMeasureHost(metrics, doc);
-  const probe = h("div", { class: "r-doc", "data-template": doc.template, "data-density": doc.settings.density || "normal" },
-    h("div", { class: "r-page" }, h("div", { class: "r-page-inner" })));
+  const probe = h("div", {
+    class: "r-doc",
+    "data-template": doc.template,
+    "data-density": doc.settings.density || "normal",
+    "data-rules": doc.settings.sectionRules || "auto",
+  }, h("div", { class: "r-page" }, h("div", { class: "r-page-inner" })));
   applyVars(probe, docStyleVars(doc));
   probe.querySelector(".r-page").style.minHeight = "0";
   host.appendChild(probe);

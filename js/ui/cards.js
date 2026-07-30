@@ -577,7 +577,7 @@ export class CardsView {
           this.itemField(section, item, "location", "Location", "Austin, TX"),
           this.itemField(section, item, "start", "Start", "May 2025"),
           this.itemField(section, item, "end", "End", "Aug 2025"),
-          wrapWide(this.itemField(section, item, "meta", "Detail line", "GPA 3.8 · Dean's List")),
+          wrapWide(this.itemField(section, item, "meta", "Detail lines", "GPA 3.8\nDean's List", { multiline: true })),
           wrapWide(this.itemField(section, item, "link", "Link", "github.com/you/project"))),
         this.buildBulletList(section, item)),
     );
@@ -585,11 +585,15 @@ export class CardsView {
     return entry;
   }
 
-  itemField(section, item, key, label, placeholder) {
+  // multiline is used for the detail lines, which render one per line and so must keep the
+  // breaks a single line input would throw away
+  itemField(section, item, key, label, placeholder, { multiline = false } = {}) {
     return h("label", { class: "mini-label" },
       h("span", null, label),
-      h("input", {
+      h(multiline ? "textarea" : "input", {
         class: "mini-input",
+        rows: multiline ? Math.min(4, Math.max(1, String(item[key] || "").split("\n").length)) : null,
+        style: multiline ? { resize: "vertical", lineHeight: "1.45" } : null,
         value: item[key] || "",
         placeholder,
         oninput: (event) => {

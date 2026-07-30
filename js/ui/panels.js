@@ -229,6 +229,9 @@ export class PanelHost {
         setting("Spacing", doc.settings.density,
           [["tight", "Tight"], ["normal", "Normal"], ["roomy", "Roomy"]],
           (value) => store.commit("Spacing", (d) => { d.settings.density = value; })),
+        setting("Lines under headings", doc.settings.sectionRules,
+          [["on", "Show"], ["off", "Hide"], ["auto", "Follow the layout"]],
+          (value) => store.commit("Section rules", (d) => { d.settings.sectionRules = value; })),
         setting("Text size", String(doc.settings.scale),
           [["0.9", "Small"], ["0.95", "Compact"], ["1", "Default"], ["1.05", "Large"], ["1.1", "Larger"]],
           (value) => store.commit("Text size", (d) => { d.settings.scale = Number(value); }))));

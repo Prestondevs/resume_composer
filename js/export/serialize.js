@@ -7,6 +7,9 @@ const visibleSections = (doc) => doc.sections.filter((section) => section.visibl
 
 const dateRange = (item) => [item.start, item.end].filter(Boolean).join(" - ");
 
+// detail lines are stored newline separated so they keep the shape they had in the source
+const metaLines = (item) => String(item.meta || "").split(/\n+/).map((l) => l.trim()).filter(Boolean);
+
 function contactLines(contact) {
   const lines = [];
   if (contact.name) lines.push(contact.name);
@@ -34,7 +37,7 @@ export function toPlainText(doc, { width = 0 } = {}) {
         const head = [item.title, item.org].filter(Boolean).join(", ");
         const tail = [dateRange(item), item.location].filter(Boolean).join(" | ");
         if (head || tail) out.push([head, tail].filter(Boolean).join("   "));
-        if (item.meta) out.push(item.meta);
+        for (const detail of metaLines(item)) out.push(detail);
         if (item.link) out.push(item.link);
         for (const bullet of item.bullets || []) out.push(...wrap(`- ${bullet}`, width, "  "));
         out.push("");
@@ -106,7 +109,7 @@ export function toMarkdown(doc) {
         const heading = [item.title && `**${item.title}**`, item.org].filter(Boolean).join(", ");
         const aside = [dateRange(item), item.location].filter(Boolean).join(" · ");
         if (heading || aside) out.push([heading, aside && `*${aside}*`].filter(Boolean).join("  \n"));
-        if (item.meta) out.push(item.meta);
+        for (const detail of metaLines(item)) out.push(detail);
         if (item.link) out.push(`[${item.link.replace(/^https?:\/\//, "")}](${absolute(item.link)})`);
         if (item.bullets?.length) {
           out.push("");

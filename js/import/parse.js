@@ -35,6 +35,8 @@ const URL = /(?:https?:\/\/|www\.)[^\s,;|]+|(?:[\w-]+\.)+(?:com|org|net|io|dev|m
 const BULLET_PREFIX = new RegExp(`^\\s*[${BULLETS}${DASHES}*+]\\s+`);
 const LOCATION_TAIL = /,\s*(?:[A-Z]{2}|[A-Z][a-z]+(?:\s[A-Z][a-z]+)?)\s*$/;
 const REMOTE = /^(?:remote|hybrid|on-?site|virtual)$/i;
+// lines that describe an entry rather than name an organisation
+const DETAIL_LINE = /^(?:cumulative\s+)?(?:gpa|cgpa|grade|honou?rs|dean|major|minor|concentration|coursework|relevant\s+coursework|tech|stack|tools|technologies|skills|languages|advisor|supervisor|thesis)\b/i;
 
 const normalizeHeading = (value) =>
   String(value ?? "").toLowerCase().replace(/&/g, " and ").replace(/[^a-z ]+/g, " ").replace(/\s+/g, " ").trim();
@@ -170,6 +172,11 @@ export function parseResume(extraction, { fileName = "" } = {}) {
     doc.settings.fonts = meta.fonts;
     doc.settings.keepFonts = true;
   }
+
+  // match the shape of the source: a centred name and contact block gets the layout that does
+  // the same, and section rules go on because nearly every real resume separates sections
+  doc.template = meta.centeredHeader ? "professional" : "minimal";
+  doc.settings.sectionRules = "on";
 
   if ((meta.pages || 1) >= 3) {
     warnings.push({
@@ -393,7 +400,7 @@ function buildSection(block, warnings) {
   } else if (layout === "prose") {
     section.body = joinWrapped(contentLines.map((line) => flatten(line.text)));
   } else {
-    section.bullets = contentLines.map((line) => flatten(stripBullet(line.text))).filter(Boolean);
+    section.bullets = parseBulletList(contentLines);
   }
 
   if (section.items?.length > 24 || section.bullets?.length > 40) {
@@ -440,6 +447,10 @@ function parseEntries(lines) {
     items.push(current);
   };
 
+  // true while the previous line carried an explicit bullet marker, which is what makes the
+  // following unmarked line a wrapped continuation rather than a new bullet
+  let afterMarkedBullet = false;
+
   for (let i = 0; i < lines.length; i += 1) {
     const line = lines[i];
     const isBullet = line.listLevel != null || BULLET_PREFIX.test(line.text);
@@ -449,8 +460,18 @@ function parseEntries(lines) {
     if (isBullet) {
       if (!current) push({ title: "" });
       current.bullets.push(flatten(text));
+      afterMarkedBullet = true;
       continue;
     }
+
+    // a long bullet wraps onto the next visual line with no marker of its own. a column break
+    // rules it out, since a wrapped sentence never contains one
+    if (afterMarkedBullet && current?.bullets.length && !text.includes("\t")) {
+      const list = current.bullets;
+      list[list.length - 1] = joinWrapped([list[list.length - 1], flatten(text)]);
+      continue;
+    }
+    afterMarkedBullet = false;
 
     const dates = extractDates(text);
 
@@ -461,9 +482,9 @@ function parseEntries(lines) {
     const continuation = current && !current.bullets.length && !current.org && !dates && text.includes("\t");
     if (continuation && absorbIntoEntry(current, text)) continue;
 
-    // only a dated or styled line starts a new entry. an unstyled line is either a wrapped
-    // continuation of the head or the continuation of a long bullet, never a head of its own
-    if (dates || line.bold || !current) {
+    // a dated line, a styled line, or a row with a real column break starts a new entry. anything
+    // else is a wrapped continuation of the head above or of a long bullet, never a head itself
+    if (dates || line.bold || !current || text.includes("\t")) {
       push(splitEntryHead(text, dates));
       continue;
     }
@@ -475,7 +496,7 @@ function parseEntries(lines) {
     if (!current.title) uncertain += 1;
   }
 
-  const cleaned = items.filter((item) => item.title || item.org || item.bullets.length);
+  const cleaned = foldHeaders(items.filter((item) => item.title || item.org || item.bullets.length));
   for (const item of cleaned) {
     if (!item.title && item.bullets.length) item.title = item.bullets.shift();
   }
@@ -496,6 +517,35 @@ function parseEntries(lines) {
       ? "No dates were found for these entries."
       : "",
   };
+}
+
+// resumes routinely name the employer or school on its own line above the dated roles under it.
+// that line parses as an entry with nothing in it, so fold it into the entry it introduces. it is
+// applied to one entry only: carrying it further would attribute a role to an employer the source
+// never linked it to
+function foldHeaders(items) {
+  const out = [];
+
+  for (let i = 0; i < items.length; i += 1) {
+    const item = items[i];
+    const next = items[i + 1];
+
+    // a header carries a name and nothing else, and the entry after it is a dated role. both
+    // halves matter: without the lookahead an ordinary undated entry would be swallowed
+    const looksLikeHeader = item.title && !item.start && !item.end && !item.bullets.length;
+    const introducesRole = next && (next.start || next.end) && !next.org;
+    if (!looksLikeHeader || !introducesRole) {
+      out.push(item);
+      continue;
+    }
+
+    // the header may already have been split on a comma into title and org; it is one name
+    next.org = [item.title, item.org].filter(Boolean).join(", ");
+    if (!next.location && item.location) next.location = item.location;
+    if (item.meta) next.meta = [item.meta, next.meta].filter(Boolean).join("\n");
+  }
+
+  return out;
 }
 
 function extractDates(text) {
@@ -528,8 +578,11 @@ function splitEntryHead(text, dates) {
     rest = rest.replace(url[0], " ");
   }
 
+  // a tab is a column break the source actually had, so it wins. only when there is none do we
+  // guess at columns from pipes, bullets or a run of spaces
+  const hasColumns = rest.includes("\t");
   const parts = rest
-    .split(new RegExp(`\\t+|\\s*[|${SEPARATORS}]\\s*|\\s{3,}|\\s+[${DASHES}]\\s+`))
+    .split(hasColumns ? /\t+/ : new RegExp(`\\s*[|${SEPARATORS}]\\s*|\\s{3,}|\\s+[${DASHES}]\\s+`))
     .map((part) => cleanText(part).replace(EDGE_PUNCT, "").trim())
     .filter(Boolean);
 
@@ -550,10 +603,15 @@ function splitEntryHead(text, dates) {
     } else {
       head.title = parts[0];
     }
+  } else if (hasColumns) {
+    // in a real two column row the right hand side is a detail such as a tech stack, not the
+    // employer. the employer is normally the line above, which foldHeaders attaches
+    head.title = parts[0];
+    head.meta = parts.slice(1).join("\n");
   } else {
     head.title = parts[0];
     head.org = parts[1];
-    if (parts.length > 2) head.meta = parts.slice(2).join(" · ");
+    if (parts.length > 2) head.meta = parts.slice(2).join(" . ");
   }
 
   return head;
@@ -577,20 +635,43 @@ function absorbIntoEntry(item, text) {
 
   if (parts.length === 1 && isLocation(rest) && !item.location) { item.location = rest; return true; }
 
-  if (!item.org && rest.length <= 80 && !/[.!?]$/.test(rest) && rest.split(/\s+/).length <= 9) {
-    const at = parts.findIndex((part) => isLocation(part) || REMOTE.test(part));
-    if (at !== -1 && !item.location) item.location = parts.splice(at, 1)[0];
-    if (parts.length) item.org = parts[0];
-    if (parts[1]) item.meta = parts.slice(1).join(" . ");
-    return true;
-  }
+  // a line sitting under the head is a detail: a GPA, an honour, a tech stack, sometimes the
+  // employer. the organisation slot is filled from the head itself or from the line above, so
+  // keeping these as detail lines in source order is what reproduces the original layout
+  const at = parts.findIndex((part) => isLocation(part) || REMOTE.test(part));
+  if (at !== -1 && !item.location) item.location = parts.splice(at, 1)[0];
+  if (!parts.length) return true;
 
-  if (!item.meta && /^(gpa|cgpa|grade|honou?rs|major|minor|concentration|coursework|tech|stack|tools|technologies)\b/i.test(rest)) {
-    item.meta = rest;
+  const detail = parts.join(" . ");
+  const isDetail = DETAIL_LINE.test(rest)
+    || (detail.length <= 100 && !/[.!?]$/.test(detail) && detail.split(/\s+/).length <= 14);
+  if (isDetail) {
+    item.meta = [item.meta, detail].filter(Boolean).join("\n");
     return true;
   }
 
   return false;
+}
+
+// same wrapped line handling as the entry parser, for sections that are a plain list
+function parseBulletList(lines) {
+  const out = [];
+  let afterMarkedBullet = false;
+
+  for (const line of lines) {
+    const isBullet = line.listLevel != null || BULLET_PREFIX.test(line.text);
+    const raw = stripBullet(line.text);
+    const text = flatten(raw);
+    if (!text) continue;
+
+    if (!isBullet && afterMarkedBullet && out.length && !raw.includes("\t")) {
+      out[out.length - 1] = joinWrapped([out[out.length - 1], text]);
+      continue;
+    }
+    out.push(text);
+    afterMarkedBullet = isBullet;
+  }
+  return out;
 }
 
 function parseGroups(lines) {

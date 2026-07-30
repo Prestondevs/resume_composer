@@ -42,6 +42,7 @@ export async function extractPdf(arrayBuffer, onProgress = () => {}) {
   let totalChars = 0;
   let twoColumnPages = 0;
   let hasVectorContent = false;
+  let centeredHeader = false;
   const fontUsage = new Map();
 
   for (let pageNumber = 1; pageNumber <= pageCount; pageNumber += 1) {
@@ -99,6 +100,8 @@ export async function extractPdf(arrayBuffer, onProgress = () => {}) {
     const columns = detectColumns(pageLines, viewport.width);
     if (columns) twoColumnPages += 1;
 
+    if (pageNumber === 1) centeredHeader = detectCenteredHeader(pageLines, viewport.width);
+
     const ordered = columns ? orderByColumn(pageLines, columns) : pageLines;
     for (const line of ordered) {
       line.page = pageNumber;
@@ -124,11 +127,33 @@ export async function extractPdf(arrayBuffer, onProgress = () => {}) {
     twoColumn: twoColumnPages > 0,
     scanned: totalChars < Math.max(40, pageCount * 60),
     hasVectorContent,
+    centeredHeader,
     fonts,
   };
 
   await pdf.destroy();
   return { lines: dropRepeatedHeaders(lines, pageCount), meta };
+}
+
+// a centred name and contact block is a deliberate design choice, so the layout picked for the
+// imported document should match it. measured from geometry rather than guessed from the text
+function detectCenteredHeader(pageLines, pageWidth) {
+  if (!pageWidth || pageLines.length < 3) return false;
+
+  const header = pageLines.slice(0, 5).filter((line) => line.right > line.x);
+  if (header.length < 2) return false;
+
+  const middle = pageWidth / 2;
+  let centred = 0;
+  for (const line of header) {
+    const width = line.right - line.x;
+    if (width > pageWidth * 0.85) continue; // a full width line tells us nothing
+    const offset = Math.abs((line.x + line.right) / 2 - middle);
+    const leftGap = line.x;
+    const rightGap = pageWidth - line.right;
+    if (offset < pageWidth * 0.06 && leftGap > pageWidth * 0.08 && rightGap > pageWidth * 0.08) centred += 1;
+  }
+  return centred >= 2 && centred >= header.length - 1;
 }
 
 async function resolveFontNames(page, fontUsage) {
