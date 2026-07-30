@@ -20,9 +20,13 @@ from ES modules, and browsers refuse to load modules over `file://`.
 
 ### GitHub Pages
 
-Push the folder to a repository and turn on Pages for the branch. `.nojekyll` is
-included so nothing gets rewritten on the way out. It works from a project
-subpath (`user.github.io/resume-composer/`) because every path is relative.
+Settings, Pages, then set Source to "Deploy from a branch", branch `main`, folder
+`/ (root)`. There is nothing to build, so the site is live a minute later.
+
+`.nojekyll` is included so Jekyll does not touch the output. Every path in the app
+is relative and the pdf.js worker is resolved from `import.meta.url`, so it works
+from a project subpath such as `prestondevs.github.io/resume_composer/` as well as
+from a user site at the domain root.
 
 ## The interface
 
