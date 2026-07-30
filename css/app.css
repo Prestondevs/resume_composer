@@ -305,7 +305,7 @@
   padding: var(--sp-6);
   background: color-mix(in oklab, var(--bg) 76%, transparent);
   backdrop-filter: blur(6px);
-  animation: fade-in var(--dur-fast) var(--ease) both;
+  animation: overlay-in var(--dur-fast) var(--ease) both;
 }
 .drop-veil[hidden] { display: none; }
 .drop-veil-card {

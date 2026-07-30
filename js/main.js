@@ -54,10 +54,41 @@ function boot() {
   renderAll();
 
   el.app.hidden = false;
+  playEntrance();
   el.boot.classList.add("is-gone");
   setTimeout(() => el.boot.remove(), 400);
 
   if (store.isFirstRun) welcome();
+}
+
+// each region arrives from the edge it lives on, staggered so the eye lands on the page first.
+// the classes are stripped once they finish: the library sets animation-fill-mode to both, and a
+// settled transform on a dock would leave a containing block that interferes with dragging and
+// with the width transition used when it collapses
+function playEntrance() {
+  const entrance = [
+    [el.canvasScroll, "fade-in", 0],
+    [qs(".topbar"), "fade-in-down", 40],
+    [el.dockLeft, "fade-in-left", 110],
+    [el.dockRight, "fade-in-right", 110],
+    // the view bar is centred with a transform of its own, and a transform based entrance would
+    // replace it for the duration and snap back at the end, so it only fades
+    [qs("#viewbar"), "fade-in", 200],
+  ];
+
+  for (const [node, effect, delay] of entrance) {
+    if (!node) continue;
+    node.classList.add("vov", "faster", effect);
+    node.style.animationDelay = `${delay}ms`;
+
+    const done = () => {
+      node.classList.remove("vov", "faster", effect);
+      node.style.animationDelay = "";
+    };
+    node.addEventListener("animationend", done, { once: true });
+    // animations never fire when the user asks for reduced motion, so clean up regardless
+    setTimeout(done, delay + 900);
+  }
 }
 
 function cacheElements() {

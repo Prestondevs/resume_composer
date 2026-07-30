@@ -76,7 +76,16 @@ js/
   templates/        renderer and measured pagination
   ui/               cards, drag and drop, preview, panels, palette, overlays
 vendor/pdfjs/       Mozilla pdf.js, vendored so the app works offline
+vendor/vov/         vov.css, the entrance animations used on load
 ```
+
+On load each region arrives from the edge it sits on, staggered so the page itself
+lands first. The classes are removed once they finish, because the library leaves
+its final transform applied and a settled transform on a dock would create a
+containing block that interferes with dragging and with the collapse transition.
+The view bar is centred with a transform of its own, so it only fades rather than
+sliding. Everything is skipped under `prefers-reduced-motion`, which the library
+handles itself.
 
 ### Decisions worth knowing
 
@@ -142,3 +151,5 @@ back.
 ## Licence
 
 `vendor/pdfjs` is Mozilla's pdf.js, Apache 2.0, licence included alongside it.
+`vendor/vov` is vov.css by Vaibhav Tandon, MIT, licence header kept in the file.
+Both are vendored unmodified so they can be swapped for a newer release.

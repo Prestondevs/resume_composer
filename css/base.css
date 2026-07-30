@@ -427,11 +427,13 @@ kbd {
   inset: 0;
   z-index: 150;
   background: rgba(18, 18, 20, 0.34);
-  animation: fade-in var(--dur) var(--ease) both;
+  animation: overlay-in var(--dur) var(--ease) both;
 }
-.scrim.is-out { animation: fade-out var(--dur-fast) var(--ease) both; }
-@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
-@keyframes fade-out { to { opacity: 0; } }
+.scrim.is-out { animation: overlay-out var(--dur-fast) var(--ease) both; }
+/* named for the overlay rather than the effect: the vendored animation library owns the generic
+   fade-in and fade-out keyframe names, and whichever loaded last would silently win */
+@keyframes overlay-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes overlay-out { to { opacity: 0; } }
 
 .dialog {
   position: fixed;
