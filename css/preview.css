@@ -1,0 +1,131 @@
+/* the resume sits in the middle of the stage and the docks float over it */
+
+.canvas-scroll {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  padding: var(--sp-5) var(--sp-4) 76px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+.canvas-scroll:focus-visible { outline: none; }
+
+.canvas {
+  width: max-content;
+  margin: 0 auto;
+  flex: none;
+}
+
+.r-doc { display: grid; gap: 16px; }
+
+.r-page {
+  position: relative;
+  width: var(--page-w, 8.5in);
+  min-height: var(--page-h, 11in);
+  background: #fff;
+  color: #14161a;
+  border-radius: 2px;
+  box-shadow: var(--paper-shadow);
+  overflow: hidden;
+  container-type: inline-size;
+}
+.r-page-inner {
+  padding: var(--page-pad, 0.55in) var(--page-pad-x, 0.6in);
+  height: 100%;
+}
+.r-page-num {
+  position: absolute;
+  right: 4px;
+  bottom: -18px;
+  font-size: 10.5px;
+  color: var(--ink-4);
+  font-variant-numeric: tabular-nums;
+}
+
+/* a rule at the bottom margin when a fixed-column layout cannot reflow */
+.r-page.is-overflowing::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0;
+  bottom: calc(var(--page-pad, 0.55in) - 1px);
+  border-top: 1px dashed rgba(150, 60, 50, 0.55);
+}
+
+.canvas-empty {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  max-width: 360px;
+  margin: 14vh auto 0;
+  padding: 28px;
+  text-align: center;
+  color: var(--ink-3);
+}
+.canvas-empty h3 { font-size: var(--step-2); font-weight: 600; color: var(--ink); letter-spacing: -0.01em; }
+.canvas-empty p { font-size: var(--step--1); line-height: 1.55; }
+.canvas-empty .btn { margin-top: 4px; }
+
+/* clicking a block in the page focuses its card */
+.r-section { position: relative; }
+.r-section[data-jump] { cursor: pointer; }
+.r-section[data-jump]::before {
+  content: "";
+  position: absolute;
+  inset: -4px -8px;
+  border-radius: 4px;
+  background: transparent;
+  transition: background var(--dur-fast) var(--ease);
+  pointer-events: none;
+}
+.r-section[data-jump]:hover::before { background: rgba(20, 20, 24, 0.05); }
+.r-section.is-linked::before { background: rgba(20, 20, 24, 0.09); }
+
+/* ATS text view */
+
+.ats-out {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 24px 28px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-1);
+  font-family: ui-monospace, Consolas, "DejaVu Sans Mono", monospace;
+  font-size: 12.5px;
+  line-height: 1.62;
+  color: var(--ink-2);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  tab-size: 4;
+}
+.ats-out[hidden] { display: none; }
+.ats-out .ats-h { color: var(--ink); font-weight: 700; }
+.ats-out .ats-flag { background: var(--warn-soft); color: var(--warn); border-radius: 3px; padding: 0 3px; }
+.ats-out .ats-bad { background: var(--bad-soft); color: var(--bad); border-radius: 3px; padding: 0 3px; }
+
+.ats-report {
+  max-width: 760px;
+  margin: 0 auto var(--sp-3);
+  padding: 14px 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+.ats-report h3 { font-size: var(--step-0); font-weight: 600; margin-bottom: 8px; }
+.ats-report li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: var(--step--1);
+  color: var(--ink-2);
+  line-height: 1.5;
+}
+.ats-report li svg { flex: none; margin-top: 2px; color: var(--ink-4); }
+.ats-report li[data-tone="good"] svg { color: var(--good); }
+.ats-report li[data-tone="warn"] svg { color: var(--warn); }
+.ats-report li[data-tone="bad"] svg { color: var(--bad); }
+
+/* the ATS view is a document too, so it scrolls in the same column */
+.canvas-scroll:has(> .ats-out:not([hidden])) { display: block; }

@@ -1,0 +1,56 @@
+/* PDF export runs through the browser's own print pipeline, which keeps text selectable and vector-sharp (rasterised exports break ATS parsing). The app clones the paginated preview into #print-root and prints that */
+
+.print-root { display: none; }
+
+@media print {
+  html, body {
+    height: auto;
+    overflow: visible;
+    background: #fff;
+  }
+
+  body > *:not(.print-root) { display: none !important; }
+
+  .print-root {
+    display: block;
+    background: #fff;
+  }
+
+  .print-root .r-doc {
+    display: block;
+    /* zoom is a preview-only concern */
+    --r-scale: 1;
+  }
+
+  .print-root .r-page {
+    width: 100%;
+    min-height: 0;
+    height: auto;
+    box-shadow: none;
+    overflow: visible;
+    break-after: page;
+    background: #fff;
+  }
+  .print-root .r-page:last-child { break-after: auto; }
+  .print-root .r-page-num,
+  .print-root .r-page.is-overflowing::after { display: none; }
+
+  .print-root .r-page-inner { height: auto; }
+
+  /* keep headings attached to the content that follows them and never split an individual entry across a page boundary */
+  .print-root .r-head { break-after: avoid; break-inside: avoid; }
+  .print-root .r-entry,
+  .print-root .r-bullets li,
+  .print-root .r-group,
+  .print-root .r-contact { break-inside: avoid; }
+  .print-root .r-section { break-inside: auto; }
+
+  .print-root a { text-decoration: none; color: inherit; }
+
+  /* some templates rely on a tinted panel; without this the browser drops it */
+  .print-root [data-template="sidebar"] .r-col-aside,
+  .print-root [data-template="sidebar"] .r-page::before {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

@@ -1,0 +1,351 @@
+/* rendered resume typography. One semantic structure, eight presentations. The renderer emits the same markup for every template; everything below is presentation only, so switching templates can never lose content. Sizes are in pt so screen preview and printed output agree */
+
+.r-doc {
+  --r-body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --r-display: var(--r-body);
+  --r-size: 10pt;
+  --r-lead: 1.4;
+  --r-name: 20pt;
+  --r-head: 10pt;
+  --r-title: 10pt;
+  --r-gap: 11pt;
+  --r-entry-gap: 7pt;
+  --r-ink: #14161a;
+  --r-ink-2: #3d4249;
+  --r-ink-3: #666c74;
+  --r-accent: #14161a;
+  --r-rule: #c9ccd1;
+  --r-bullet: "•";
+}
+
+.r-page-inner {
+  font-family: var(--r-body);
+  font-size: calc(var(--r-size) * var(--r-scale, 1));
+  line-height: var(--r-lead);
+  color: var(--r-ink);
+}
+
+/* contact header */
+
+.r-contact { margin-bottom: var(--r-gap); }
+.r-name {
+  font-family: var(--r-display);
+  font-size: calc(var(--r-name) * var(--r-scale, 1));
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: -0.015em;
+  color: var(--r-accent);
+  margin-bottom: 2pt;
+}
+.r-headline {
+  font-size: calc(var(--r-size) * 1.02 * var(--r-scale, 1));
+  color: var(--r-ink-2);
+  margin-bottom: 3pt;
+}
+.r-contact-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 7pt;
+  font-size: calc(var(--r-size) * 0.94 * var(--r-scale, 1));
+  color: var(--r-ink-2);
+  line-height: 1.5;
+}
+.r-contact-line a { color: inherit; text-decoration: none; }
+.r-contact-line .r-sep { color: var(--r-rule); }
+
+/* sections */
+
+.r-section { margin-bottom: var(--r-gap); }
+.r-section:last-child { margin-bottom: 0; }
+
+.r-head {
+  font-family: var(--r-display);
+  font-size: calc(var(--r-head) * var(--r-scale, 1));
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--r-accent);
+  padding-bottom: 2pt;
+  margin-bottom: 5pt;
+  border-bottom: 0.75pt solid var(--r-rule);
+}
+
+.r-entry { margin-bottom: var(--r-entry-gap); break-inside: avoid; }
+.r-entry:last-child { margin-bottom: 0; }
+
+.r-entry-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10pt;
+}
+.r-entry-lead { min-width: 0; }
+.r-entry-aside { flex: none; text-align: right; color: var(--r-ink-3); font-size: calc(var(--r-size) * 0.94 * var(--r-scale, 1)); }
+.r-title { font-size: calc(var(--r-title) * var(--r-scale, 1)); font-weight: 700; color: var(--r-ink); }
+.r-org { color: var(--r-ink-2); }
+.r-org::before { content: ", "; color: var(--r-ink-3); }
+.r-entry-lead.stacked .r-org { display: block; font-style: italic; }
+.r-entry-lead.stacked .r-org::before { content: none; }
+.r-dates { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.r-loc { display: block; font-style: italic; }
+.r-meta { color: var(--r-ink-2); font-size: calc(var(--r-size) * 0.94 * var(--r-scale, 1)); margin-top: 0.5pt; }
+.r-link { color: var(--r-ink-3); font-size: calc(var(--r-size) * 0.9 * var(--r-scale, 1)); text-decoration: none; word-break: break-all; }
+
+.r-bullets { margin-top: 2pt; }
+.r-bullets li {
+  position: relative;
+  padding-left: 10pt;
+  margin-bottom: 1.5pt;
+  color: var(--r-ink-2);
+  break-inside: avoid;
+}
+.r-bullets li::before {
+  content: var(--r-bullet);
+  position: absolute;
+  left: 1pt;
+  color: var(--r-ink-3);
+}
+.r-bullets li:last-child { margin-bottom: 0; }
+
+.r-inline-groups { display: grid; gap: 2.5pt; }
+.r-group { display: flex; gap: 5pt; align-items: baseline; }
+.r-group-label { flex: none; font-weight: 700; color: var(--r-ink); }
+.r-group-label::after { content: ":"; }
+.r-group-items { color: var(--r-ink-2); min-width: 0; }
+.r-inline-groups.no-labels .r-group-label { display: none; }
+
+.r-prose { color: var(--r-ink-2); }
+.r-prose p + p { margin-top: 4pt; }
+
+.r-flat li { position: relative; padding-left: 10pt; color: var(--r-ink-2); margin-bottom: 1.5pt; }
+.r-flat li::before { content: var(--r-bullet); position: absolute; left: 1pt; color: var(--r-ink-3); }
+
+/* two-column page layout (used by Sidebar and Creative) */
+
+.r-page-inner.two-col {
+  display: grid;
+  grid-template-columns: var(--r-aside-w, 2.05in) 1fr;
+  gap: 0 var(--r-col-gap, 16pt);
+  align-items: start;
+}
+.r-col-aside { min-width: 0; }
+.r-col-main { min-width: 0; }
+.two-col .r-contact { grid-column: 1 / -1; }
+
+/* minimal */
+
+.r-doc[data-template="minimal"] {
+  --r-body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --r-size: 10pt;
+  --r-name: 21pt;
+  --r-gap: 12pt;
+  --r-rule: #d8dade;
+}
+[data-template="minimal"] .r-head {
+  letter-spacing: 0.14em;
+  font-size: calc(8.5pt * var(--r-scale, 1));
+  color: var(--r-ink-3);
+  border-bottom: 0;
+  margin-bottom: 3pt;
+}
+[data-template="minimal"] .r-name { font-weight: 400; letter-spacing: -0.005em; }
+[data-template="minimal"] .r-contact { padding-bottom: 8pt; border-bottom: 0.75pt solid var(--r-rule); }
+
+/* professional */
+
+.r-doc[data-template="professional"] {
+  --r-body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --r-display: "Segoe UI", Inter, system-ui, sans-serif;
+  --r-size: 10pt;
+  --r-name: 22pt;
+  --r-head: 9.5pt;
+  --r-accent: #1f2933;
+  --r-rule: #b9bec6;
+}
+[data-template="professional"] .r-contact { text-align: center; padding-bottom: 7pt; border-bottom: 1.25pt solid var(--r-accent); }
+[data-template="professional"] .r-contact-line { justify-content: center; }
+[data-template="professional"] .r-name { letter-spacing: 0.02em; text-transform: uppercase; font-size: calc(var(--r-name) * 0.86 * var(--r-scale, 1)); }
+[data-template="professional"] .r-head { border-bottom-width: 0.75pt; }
+
+/* technical */
+
+.r-doc[data-template="technical"] {
+  --r-body: "Segoe UI", Inter, system-ui, "Helvetica Neue", sans-serif;
+  --r-display: var(--r-body);
+  --r-size: 9.5pt;
+  --r-lead: 1.38;
+  --r-name: 19pt;
+  --r-head: 9pt;
+  --r-gap: 10pt;
+  --r-entry-gap: 6.5pt;
+  --r-accent: #10243f;
+  --r-rule: #cbd2da;
+  --r-bullet: "-";
+}
+[data-template="technical"] .r-head {
+  letter-spacing: 0.1em;
+  border-bottom: 0;
+  padding: 1.5pt 0 1.5pt 0;
+  border-left: 2.5pt solid var(--r-accent);
+  padding-left: 5pt;
+  margin-left: -5pt;
+  margin-bottom: 4pt;
+}
+[data-template="technical"] .r-title { font-weight: 600; }
+[data-template="technical"] .r-group-label { font-weight: 600; }
+
+/* business */
+
+.r-doc[data-template="business"] {
+  --r-body: Georgia, "Times New Roman", serif;
+  --r-display: Georgia, serif;
+  --r-size: 10.5pt;
+  --r-lead: 1.42;
+  --r-name: 23pt;
+  --r-head: 10pt;
+  --r-gap: 13pt;
+  --r-accent: #23364f;
+  --r-rule: #23364f;
+}
+[data-template="business"] .r-name { font-weight: 400; letter-spacing: 0.01em; }
+[data-template="business"] .r-contact { padding-bottom: 8pt; border-bottom: 2pt solid var(--r-rule); }
+[data-template="business"] .r-head { border-bottom-width: 0.5pt; letter-spacing: 0.12em; }
+[data-template="business"] .r-entry-aside { font-variant: small-caps; letter-spacing: 0.03em; }
+
+/* academic */
+
+.r-doc[data-template="academic"] {
+  --r-body: "Source Serif 4", "Palatino Linotype", Palatino, Georgia, serif;
+  --r-size: 10.5pt;
+  --r-lead: 1.45;
+  --r-name: 20pt;
+  --r-head: 10pt;
+  --r-gap: 13pt;
+  --r-entry-gap: 8pt;
+  --r-rule: #1a1c20;
+}
+[data-template="academic"] .r-contact { text-align: center; margin-bottom: 14pt; }
+[data-template="academic"] .r-contact-line { justify-content: center; display: block; }
+[data-template="academic"] .r-name { font-weight: 400; letter-spacing: 0.04em; }
+[data-template="academic"] .r-head {
+  text-transform: none;
+  font-style: italic;
+  letter-spacing: 0;
+  font-size: calc(11pt * var(--r-scale, 1));
+  font-weight: 600;
+  border-bottom-width: 0.5pt;
+}
+[data-template="academic"] .r-entry-top { display: block; }
+[data-template="academic"] .r-entry-aside { text-align: left; display: block; }
+[data-template="academic"] .r-loc { display: inline; font-style: normal; }
+[data-template="academic"] .r-loc::before { content: ", "; }
+
+/* creative */
+
+.r-doc[data-template="creative"] {
+  --r-body: "Segoe UI", Inter, system-ui, sans-serif;
+  --r-display: var(--r-body);
+  --r-size: 9.5pt;
+  --r-lead: 1.45;
+  --r-name: 26pt;
+  --r-head: 8.5pt;
+  --r-gap: 12pt;
+  --r-accent: #b0472b;
+  --r-rule: #e2d9d4;
+  --r-aside-w: 1.95in;
+  --r-col-gap: 20pt;
+}
+[data-template="creative"] .r-name { font-weight: 300; letter-spacing: -0.03em; line-height: 1; }
+[data-template="creative"] .r-contact { margin-bottom: 14pt; }
+[data-template="creative"] .r-headline { color: var(--r-accent); font-weight: 500; letter-spacing: 0.01em; }
+[data-template="creative"] .r-head {
+  border-bottom: 0;
+  color: var(--r-accent);
+  letter-spacing: 0.16em;
+  margin-bottom: 4pt;
+}
+[data-template="creative"] .r-col-aside .r-section { margin-bottom: 10pt; }
+[data-template="creative"] .r-col-aside .r-group { display: block; }
+[data-template="creative"] .r-col-aside .r-group-label { display: block; }
+
+/* ATS Friendly */
+
+.r-doc[data-template="ats"] {
+  --r-body: Arial, "Helvetica Neue", Helvetica, sans-serif;
+  --r-display: var(--r-body);
+  --r-size: 11pt;
+  --r-lead: 1.3;
+  --r-name: 16pt;
+  --r-head: 12pt;
+  --r-gap: 11pt;
+  --r-entry-gap: 8pt;
+  --r-rule: transparent;
+  --r-ink-2: #14161a;
+  --r-ink-3: #14161a;
+  --r-bullet: "•";
+}
+/* deliberately plain: left aligned, no rules, no columns, one clear heading level, and no glyphs a parser might drop */
+[data-template="ats"] .r-contact { text-align: left; border: 0; padding: 0; }
+[data-template="ats"] .r-contact-line { display: block; }
+[data-template="ats"] .r-contact-line .r-sep { display: none; }
+[data-template="ats"] .r-contact-line > span,
+[data-template="ats"] .r-contact-line > a { display: block; }
+[data-template="ats"] .r-name { font-weight: 700; letter-spacing: 0; }
+[data-template="ats"] .r-head { border: 0; text-transform: uppercase; letter-spacing: 0; font-weight: 700; margin-bottom: 3pt; }
+[data-template="ats"] .r-entry-top { display: block; }
+[data-template="ats"] .r-entry-aside { text-align: left; display: block; }
+[data-template="ats"] .r-loc { display: inline; font-style: normal; }
+[data-template="ats"] .r-loc::before { content: " | "; }
+
+/* sidebar */
+
+.r-doc[data-template="sidebar"] {
+  --r-body: "Segoe UI", Inter, system-ui, sans-serif;
+  --r-display: var(--r-body);
+  --r-size: 9.5pt;
+  --r-lead: 1.42;
+  --r-name: 20pt;
+  --r-head: 8.5pt;
+  --r-gap: 11pt;
+  --r-accent: #1d3557;
+  --r-rule: #d4d9e0;
+  --r-aside-w: 2.15in;
+  --r-col-gap: 18pt;
+}
+[data-template="sidebar"] .r-page-inner.two-col { padding: 0; }
+[data-template="sidebar"] .r-col-aside {
+  align-self: stretch;
+  background: #f2f4f7;
+  padding: var(--page-pad, 0.55in) 14pt;
+  min-height: 100%;
+}
+[data-template="sidebar"] .r-col-main { padding: var(--page-pad, 0.55in) var(--page-pad-x, 0.6in) var(--page-pad, 0.55in) 0; }
+[data-template="sidebar"] .two-col .r-contact {
+  grid-column: 1;
+  grid-row: 1;
+  padding: var(--page-pad, 0.55in) 14pt 0;
+  margin-bottom: 8pt;
+}
+[data-template="sidebar"] .r-page-inner.two-col > .r-col-aside { grid-row: 2; }
+[data-template="sidebar"] .r-page-inner.two-col > .r-col-main { grid-row: 1 / span 2; grid-column: 2; }
+[data-template="sidebar"] .r-head { border-bottom: 0; color: var(--r-accent); letter-spacing: 0.12em; margin-bottom: 3pt; }
+[data-template="sidebar"] .r-name { font-weight: 600; letter-spacing: -0.02em; color: var(--r-accent); }
+[data-template="sidebar"] .r-contact-line { display: block; }
+[data-template="sidebar"] .r-contact-line .r-sep { display: none; }
+[data-template="sidebar"] .r-col-aside .r-group { display: block; }
+[data-template="sidebar"] .r-col-aside .r-group-label { display: block; }
+
+/* sidebar needs the tinted column to run the full page height even when the aside content is short */
+[data-template="sidebar"] .r-page::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--r-aside-w, 2.15in);
+  background: #f2f4f7;
+}
+[data-template="sidebar"] .r-page-inner { position: relative; }
+
+/* density control applied on top of any template */
+.r-doc[data-density="tight"] { --r-lead: 1.28; --r-gap: 8pt; --r-entry-gap: 5pt; }
+.r-doc[data-density="roomy"] { --r-lead: 1.55; --r-gap: 15pt; --r-entry-gap: 10pt; }
