@@ -108,6 +108,22 @@
 }
 .r-bullets li:last-child { margin-bottom: 0; }
 
+/* a bullet that carried a trailing column in the source keeps it against the right margin */
+.r-bullets li.has-tail,
+.r-flat li.has-tail {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10pt;
+}
+.r-bullet-text { min-width: 0; }
+.r-bullet-tail {
+  flex: none;
+  white-space: nowrap;
+  color: var(--r-ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
 .r-inline-groups { display: grid; gap: 2.5pt; }
 .r-group { display: flex; gap: 5pt; align-items: baseline; }
 .r-group-label { flex: none; font-weight: 700; color: var(--r-ink); }

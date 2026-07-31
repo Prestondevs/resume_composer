@@ -94,6 +94,17 @@
   bottom: var(--sp-3);
   z-index: 15;
   width: var(--dock-w);
+  /* the dock is only a frame: the panel inside it slides, and the frame itself must not swallow
+     clicks meant for the page once the panel has slid away */
+  pointer-events: none;
+}
+.dock-left { left: var(--sp-3); }
+.dock-right { right: var(--sp-3); }
+
+.dock-panel {
+  pointer-events: auto;
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -102,49 +113,73 @@
   border: 1px solid var(--line-strong);
   border-radius: var(--r-xl);
   box-shadow: var(--shadow-dock);
-  transition: width var(--dur) var(--ease), bottom var(--dur) var(--ease);
+  transition: transform var(--dur-slow) var(--ease-out), opacity var(--dur) var(--ease);
 }
-.dock-left { left: var(--sp-3); }
-.dock-right { right: var(--sp-3); }
 
-/* collapsed: the head stays as a compact handle and everything else folds away */
-.dock[data-collapsed="true"] {
-  width: auto;
-  bottom: auto;
+/* collapsed: the panel slides off its own edge and a handle slides in to bring it back */
+.dock[data-collapsed="true"] .dock-panel {
+  opacity: 0;
+  pointer-events: none;
 }
-.dock[data-collapsed="true"] .dock-body,
-.dock[data-collapsed="true"] .dock-tabs,
-.dock[data-collapsed="true"] .dock-count,
-.dock[data-collapsed="true"] .dock-head > .icon-btn { display: none; }
-.dock[data-collapsed="true"] .dock-head { border-bottom: 0; padding: 4px; }
-.dock[data-collapsed="true"] .dock-chev { transform: rotate(180deg); }
+.dock-left[data-collapsed="true"] .dock-panel { transform: translateX(calc(-100% - var(--sp-4))); }
+.dock-right[data-collapsed="true"] .dock-panel { transform: translateX(calc(100% + var(--sp-4))); }
+
+.dock-handle {
+  pointer-events: auto;
+  position: absolute;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 33px;
+  padding: 0 12px;
+  background: var(--dock);
+  backdrop-filter: blur(14px) saturate(1.4);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-dock);
+  font-size: var(--step--1);
+  font-weight: 600;
+  color: var(--ink-2);
+  white-space: nowrap;
+  opacity: 0;
+  transition: transform var(--dur-slow) var(--ease-out), opacity var(--dur) var(--ease),
+              background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.dock-handle svg { color: var(--ink-4); }
+.dock-handle:hover { background: var(--surface); color: var(--ink); }
+.dock-handle:hover svg { color: var(--ink-2); }
+.dock-left .dock-handle { left: 0; transform: translateX(calc(-100% - var(--sp-4))); }
+.dock-right .dock-handle { right: 0; transform: translateX(calc(100% + var(--sp-4))); }
+.dock-right .dock-handle svg { order: 2; }
+.dock[data-collapsed="true"] .dock-handle { opacity: 1; transform: translateX(0); }
+.dock:not([data-collapsed="true"]) .dock-handle { pointer-events: none; }
 
 .dock-head {
   flex: none;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 8px 8px 10px;
+  gap: 8px;
+  padding: 7px 8px;
   border-bottom: 1px solid var(--line);
 }
 
 .dock-toggle {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 7px;
-  flex: 1;
   min-width: 0;
-  padding: 4px 6px;
-  margin: -4px -6px;
-  border-radius: var(--r-sm);
+  padding: 5px 8px;
+  border-radius: var(--r-md);
   color: var(--ink);
   transition: background var(--dur-fast) var(--ease);
 }
 .dock-toggle:hover { background: var(--surface-3); }
 .dock-title { font-size: var(--step--1); font-weight: 600; white-space: nowrap; }
-.dock-chev { color: var(--ink-4); transition: transform var(--dur) var(--ease); flex: none; }
-.dock-right .dock-toggle { flex-direction: row-reverse; }
-.dock-count { font-size: 11.5px; color: var(--ink-4); white-space: nowrap; flex: none; }
+.dock-chev { color: var(--ink-4); flex: none; }
+/* the chevron sits on the outward facing side of each dock and points the way the panel moves */
+.dock-right .dock-toggle .dock-chev { order: 2; }
+.dock-count { margin-left: auto; font-size: 11.5px; color: var(--ink-4); white-space: nowrap; flex: none; }
 
 .dock-body { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
 

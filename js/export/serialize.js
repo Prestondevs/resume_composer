@@ -10,6 +10,14 @@ const dateRange = (item) => [item.start, item.end].filter(Boolean).join(" - ");
 // detail lines are stored newline separated so they keep the shape they had in the source
 const metaLines = (item) => String(item.meta || "").split(/\n+/).map((l) => l.trim()).filter(Boolean);
 
+// a bullet may carry a trailing column that the source set against the right margin. plain text
+// keeps the tab, which is what a parser sees; markdown has no right alignment, so it reads as an
+// aside instead
+const bulletAside = (line) => {
+  const at = String(line).indexOf("\t");
+  return at === -1 ? String(line) : `${line.slice(0, at).trim()} (${line.slice(at + 1).trim()})`;
+};
+
 function contactLines(contact) {
   const lines = [];
   if (contact.name) lines.push(contact.name);
@@ -113,13 +121,13 @@ export function toMarkdown(doc) {
         if (item.link) out.push(`[${item.link.replace(/^https?:\/\//, "")}](${absolute(item.link)})`);
         if (item.bullets?.length) {
           out.push("");
-          for (const bullet of item.bullets) out.push(`- ${escapeMarkdown(bullet)}`);
+          for (const bullet of item.bullets) out.push(`- ${escapeMarkdown(bulletAside(bullet))}`);
         }
         out.push("");
       }
     } else if (section.layout === "bullets") {
       for (const line of section.bullets || []) {
-        if (line.trim()) out.push(`- ${escapeMarkdown(line)}`);
+        if (line.trim()) out.push(`- ${escapeMarkdown(bulletAside(line))}`);
       }
       out.push("");
     } else if (section.layout === "inline") {

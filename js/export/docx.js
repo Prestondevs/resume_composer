@@ -13,6 +13,25 @@ const inches = (value) => Math.round(value * TWIPS_PER_INCH);
 // detail lines are stored newline separated so each becomes its own paragraph
 const metaLines = (item) => String(item.meta || "").split(/\n+/).map((line) => line.trim()).filter(Boolean);
 
+// a bullet whose source carried a trailing column is rebuilt with a real right tab stop, so Word
+// sets the dates against the margin instead of running them into the text
+function bulletParagraph(line, contentWidth) {
+  const at = String(line).indexOf("\t");
+  if (at === -1) {
+    return paragraph({ style: "ListBullet", numbered: true, runs: [{ text: line }] });
+  }
+  return paragraph({
+    style: "ListBullet",
+    numbered: true,
+    tabs: [{ align: "right", pos: contentWidth }],
+    runs: [
+      { text: line.slice(0, at).trim() },
+      { tab: true },
+      { text: line.slice(at + 1).trim(), italic: true },
+    ],
+  });
+}
+
 const FONT_STACKS = {
   minimal: { body: "Georgia", display: "Georgia" },
   professional: { body: "Georgia", display: "Calibri" },
@@ -109,14 +128,14 @@ function renderSection(section, contentWidth) {
       }
       if (item.link) out.push(paragraph({ style: "EntryMeta", runs: [{ text: item.link }] }));
       for (const bullet of item.bullets || []) {
-        if (bullet.trim()) out.push(paragraph({ style: "ListBullet", numbered: true, runs: [{ text: bullet }] }));
+        if (bullet.trim()) out.push(bulletParagraph(bullet, contentWidth));
       }
       out.push(paragraph({ style: "Spacer", runs: [] }));
     }
     if (out[out.length - 1]?.includes('w:val="Spacer"')) out.pop();
   } else if (section.layout === "bullets") {
     for (const line of section.bullets || []) {
-      if (line.trim()) out.push(paragraph({ style: "ListBullet", numbered: true, runs: [{ text: line }] }));
+      if (line.trim()) out.push(bulletParagraph(line, contentWidth));
     }
   } else if (section.layout === "inline") {
     for (const group of section.groups || []) {

@@ -59,30 +59,42 @@
     </div>
 
     <section class="dock dock-left" id="dock-left" aria-label="Resume sections">
-      <header class="dock-head">
-        <button class="dock-toggle" id="dock-left-toggle" aria-expanded="true" aria-controls="dock-left-body" title="Collapse sections">
-          <svg class="dock-chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
-          <span class="dock-title">Sections</span>
-        </button>
-        <span class="dock-count" id="dock-left-count"></span>
-        <button class="icon-btn sm" id="collapse-all-btn" title="Collapse or expand every card" aria-label="Collapse or expand every card"></button>
-      </header>
-      <div class="dock-body" id="dock-left-body">
-        <div class="cards" id="cards" role="list"></div>
+      <div class="dock-panel">
+        <header class="dock-head">
+          <button class="dock-toggle" id="dock-left-toggle" aria-expanded="true" aria-controls="dock-left-body" title="Hide sections">
+            <svg class="dock-chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+            <span class="dock-title">Sections</span>
+          </button>
+          <span class="dock-count" id="dock-left-count"></span>
+          <button class="icon-btn sm" id="collapse-all-btn" title="Collapse or expand every card" aria-label="Collapse or expand every card"></button>
+        </header>
+        <div class="dock-body" id="dock-left-body">
+          <div class="cards" id="cards" role="list"></div>
+        </div>
       </div>
+      <button class="dock-handle" id="dock-left-handle" tabindex="-1" aria-hidden="true" title="Show sections">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+        <span>Sections</span>
+      </button>
     </section>
 
     <section class="dock dock-right" id="dock-right" aria-label="Tools">
-      <header class="dock-head">
-        <button class="dock-toggle" id="dock-right-toggle" aria-expanded="true" aria-controls="dock-right-body" title="Collapse tools">
-          <svg class="dock-chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>
-          <span class="dock-title" id="dock-right-title">Library</span>
-        </button>
-      </header>
-      <nav class="dock-tabs" id="dock-tabs" role="tablist" aria-label="Tool panels"></nav>
-      <div class="dock-body" id="dock-right-body">
-        <div class="panel" id="panel"></div>
+      <div class="dock-panel">
+        <header class="dock-head">
+          <button class="dock-toggle" id="dock-right-toggle" aria-expanded="true" aria-controls="dock-right-body" title="Hide tools">
+            <svg class="dock-chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>
+            <span class="dock-title" id="dock-right-title">Library</span>
+          </button>
+        </header>
+        <nav class="dock-tabs" id="dock-tabs" role="tablist" aria-label="Tool panels"></nav>
+        <div class="dock-body" id="dock-right-body">
+          <div class="panel" id="panel"></div>
+        </div>
       </div>
+      <button class="dock-handle" id="dock-right-handle" tabindex="-1" aria-hidden="true" title="Show tools">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>
+        <span id="dock-right-handle-label">Library</span>
+      </button>
     </section>
 
     <div class="viewbar" id="viewbar">

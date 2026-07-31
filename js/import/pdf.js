@@ -79,6 +79,7 @@ export async function extractPdf(arrayBuffer, onProgress = () => {}) {
         y,
         width: item.width || text.length * size * 0.5,
         size,
+        font: item.fontName || "",
         bold: /bold|black|heavy|semibold|-bd|,bold/i.test(item.fontName || ""),
         blank: false,
       });
@@ -113,6 +114,8 @@ export async function extractPdf(arrayBuffer, onProgress = () => {}) {
 
   onProgress(0.85, "Interpreting layout");
 
+  markEmphasis(lines, fontUsage);
+
   const fonts = pickFonts(Array.from(fontUsage.values()).map((usage) => ({
     name: usage.realName || "",
     chars: usage.chars,
@@ -128,11 +131,57 @@ export async function extractPdf(arrayBuffer, onProgress = () => {}) {
     scanned: totalChars < Math.max(40, pageCount * 60),
     hasVectorContent,
     centeredHeader,
+    leading: measureLeading(lines),
     fonts,
   };
 
   await pdf.destroy();
   return { lines: dropRepeatedHeaders(lines, pageCount), meta };
+}
+
+// the ratio of baseline spacing to font size, which is how tightly the source was set. a resume
+// squeezed onto two pages in LaTeX and the same resume at default web leading are different
+// documents by the time they reach the third page, so this is worth carrying across
+function measureLeading(lines) {
+  const ratios = [];
+  for (let i = 1; i < lines.length; i += 1) {
+    const previous = lines[i - 1];
+    const line = lines[i];
+    if (line.page !== previous.page) continue;
+    const gap = previous.y - line.y;
+    const size = line.size || previous.size;
+    if (!size || gap <= 0) continue;
+    const ratio = gap / size;
+    // anything outside this band is a section break or a column jump, not a line of body text
+    if (ratio > 0.9 && ratio < 2.2) ratios.push(ratio);
+  }
+  if (ratios.length < 8) return null;
+  ratios.sort((a, b) => a - b);
+  return Number(ratios[Math.floor(ratios.length / 2)].toFixed(3));
+}
+
+// a heading or a job title is set in a heavier cut of the body face, but the font name only says
+// so in files produced by word processors. LaTeX ships bold as SFBX or CMBX, and plenty of
+// embedded fonts are named nothing at all. comparing each line against the face that carries the
+// bulk of the document identifies emphasis whatever it happens to be called
+function markEmphasis(lines, fontUsage) {
+  if (!lines.length || fontUsage.size < 2) return;
+
+  const ranked = Array.from(fontUsage.entries()).sort((a, b) => b[1].chars - a[1].chars);
+  const bodyFont = ranked[0][0];
+  const bodyChars = ranked[0][1].chars;
+  const total = ranked.reduce((sum, [, usage]) => sum + usage.chars, 0);
+
+  // if no single face dominates, the document is not using one body font and a comparison would
+  // label half of it as emphasis
+  if (bodyChars / total < 0.4) return;
+
+  for (const line of lines) {
+    if (!line.font || line.font === bodyFont) continue;
+    if (line.bold) continue;
+    line.bold = true;
+    line.emphasisFont = true;
+  }
 }
 
 // a centred name and contact block is a deliberate design choice, so the layout picked for the
@@ -220,10 +269,23 @@ function buildLines(runs) {
     const left = Math.min(...visible.map((r) => r.x));
     const right = Math.max(...visible.map((r) => r.x + r.width));
 
+    // which font carries most of this line, so emphasis can be judged against the body font
+    const perFont = new Map();
+    for (const run of visible) {
+      perFont.set(run.font, (perFont.get(run.font) || 0) + run.text.trim().length);
+    }
+    const font = Array.from(perFont.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] || "";
+
+    const clean = cleanLine(text).trim();
+
     return {
-      text: cleanLine(text).trim(),
+      text: clean,
       size: Math.max(...visible.map((r) => r.size)),
       bold: boldWidth / totalWidth > 0.6,
+      // capitals separate a section heading from an emphasised entry title, so the section parser
+      // needs this from PDF just as much as from the other readers
+      allCaps: /[A-Z]/.test(clean) && !/[a-z]/.test(clean) && clean.length > 2 && clean.length < 46,
+      font,
       x: left,
       right,
       y: bucket.y,

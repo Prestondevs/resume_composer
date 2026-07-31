@@ -130,7 +130,7 @@ function buildEntry(item, templateId) {
     ...metaLines(item).map((line) => h("div", { class: "r-meta" }, line)),
     item.link && h("div", null, h("a", { class: "r-link", href: absoluteUrl(item.link), rel: "noreferrer" }, displayUrl(item.link))),
     item.bullets?.some((line) => line.trim())
-      ? h("ul", { class: "r-bullets" }, item.bullets.filter((line) => line.trim()).map((line) => h("li", null, line)))
+      ? h("ul", { class: "r-bullets" }, item.bullets.filter((line) => line.trim()).map(bulletItem))
       : null,
   );
 }
@@ -138,6 +138,15 @@ function buildEntry(item, templateId) {
 const absoluteUrl = (url) => (/^https?:\/\//i.test(url) ? url : `https://${url}`);
 
 export const metaLines = (item) => String(item.meta || "").split("\n").map((line) => line.trim()).filter(Boolean);
+
+// a bullet may carry a trailing column, which the source set against the right margin
+export function bulletItem(line) {
+  const at = line.indexOf("\t");
+  if (at === -1) return h("li", null, line);
+  return h("li", { class: "has-tail" },
+    h("span", { class: "r-bullet-text" }, line.slice(0, at).trim()),
+    h("span", { class: "r-bullet-tail" }, line.slice(at + 1).trim()));
+}
 
 // returns the section element plus the child nodes pagination may split on
 function buildSection(section, doc) {
@@ -164,7 +173,7 @@ function buildSection(section, doc) {
     const list = h("ul", { class: "r-flat" });
     for (const line of section.bullets || []) {
       if (!line.trim()) continue;
-      const li = h("li", null, line);
+      const li = bulletItem(line);
       list.appendChild(li);
       units.push(li);
     }

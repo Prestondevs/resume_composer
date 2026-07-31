@@ -1,4 +1,4 @@
-import { uid, cleanText } from "./lib/util.js";
+import { uid, cleanText, cleanLine } from "./lib/util.js";
 
 // a section owns exactly one layout, and the layout decides which content field is meaningful
 // Keeping that mapping in one table means the editor, the four exporters and the eight
@@ -428,14 +428,14 @@ function normalizeSection(input) {
       link: cleanText(item?.link).slice(0, 300),
       bullets: (Array.isArray(item?.bullets) ? item.bullets : [])
         .slice(0, 40)
-        .map((line) => cleanText(line).slice(0, 900))
-        .filter((line) => line.length > 0),
+        .map((line) => cleanLine(line).slice(0, 900))
+        .filter((line) => line.trim().length > 0),
     }));
   } else if (layout === "bullets") {
     section.bullets = (Array.isArray(input?.bullets) ? input.bullets : [])
       .slice(0, 200)
-      .map((line) => cleanText(line).slice(0, 900))
-      .filter((line) => line.length > 0);
+      .map((line) => cleanLine(line).slice(0, 900))
+      .filter((line) => line.trim().length > 0);
   } else if (layout === "inline") {
     section.groups = (Array.isArray(input?.groups) ? input.groups : []).slice(0, 40).map((group) => ({
       id: group?.id || uid("g"),

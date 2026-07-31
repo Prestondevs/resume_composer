@@ -109,6 +109,9 @@ function cacheElements() {
     dockRight: qs("#dock-right"),
     dockLeftToggle: qs("#dock-left-toggle"),
     dockRightToggle: qs("#dock-right-toggle"),
+    dockLeftHandle: qs("#dock-left-handle"),
+    dockRightHandle: qs("#dock-right-handle"),
+    dockRightHandleLabel: qs("#dock-right-handle-label"),
     dockLeftCount: qs("#dock-left-count"),
     dockRightTitle: qs("#dock-right-title"),
     dockTabs: qs("#dock-tabs"),
@@ -267,6 +270,8 @@ const isNarrow = () => window.matchMedia("(max-width: 760px)").matches;
 function wireDocks() {
   el.dockLeftToggle.addEventListener("click", () => toggleDock("left"));
   el.dockRightToggle.addEventListener("click", () => toggleDock("right"));
+  el.dockLeftHandle.addEventListener("click", () => toggleDock("left"));
+  el.dockRightHandle.addEventListener("click", () => toggleDock("right"));
 
   for (const tool of TOOL_PANELS) {
     el.dockTabs.appendChild(h("button", {
@@ -312,11 +317,17 @@ function applyUi() {
   el.dockRight.dataset.collapsed = String(!rightOpen);
   el.dockLeftToggle.setAttribute("aria-expanded", String(leftOpen));
   el.dockRightToggle.setAttribute("aria-expanded", String(rightOpen));
-  el.dockLeftToggle.title = leftOpen ? "Collapse sections" : "Expand sections";
-  el.dockRightToggle.title = rightOpen ? "Collapse tools" : "Expand tools";
+
+  // the handle is the only way back once a panel has slid away, so it takes the panel's place in
+  // the tab order exactly when the panel is gone
+  for (const [handle, open] of [[el.dockLeftHandle, leftOpen], [el.dockRightHandle, rightOpen]]) {
+    handle.tabIndex = open ? -1 : 0;
+    handle.setAttribute("aria-hidden", String(open));
+  }
 
   const active = TOOL_PANELS.find((tool) => tool.id === store.ui.panel) || TOOL_PANELS[0];
   el.dockRightTitle.textContent = active.label;
+  el.dockRightHandleLabel.textContent = active.label;
   for (const tab of qsa(".dock-tab", el.dockTabs)) {
     tab.setAttribute("aria-selected", String(tab.dataset.panel === active.id));
   }

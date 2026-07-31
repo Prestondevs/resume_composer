@@ -41,16 +41,30 @@ const DETAIL_LINE = /^(?:cumulative\s+)?(?:gpa|cgpa|grade|honou?rs|dean|major|mi
 const normalizeHeading = (value) =>
   String(value ?? "").toLowerCase().replace(/&/g, " and ").replace(/[^a-z ]+/g, " ").replace(/\s+/g, " ").trim();
 
+// headings appear in both numbers ("Involvement" and "Involvements"), so every alias is indexed
+// with and without trailing plurals rather than listing each form by hand
+const depluralize = (value) => value.replace(/\b(\w{4,})s\b/g, "$1");
+
 const ALIAS_INDEX = buildAliasIndex();
 
 function buildAliasIndex() {
   const index = new Map();
+  const add = (text, type) => {
+    const key = normalizeHeading(text);
+    if (!key) return;
+    if (!index.has(key)) index.set(key, type);
+    const singular = depluralize(key);
+    if (singular !== key && !index.has(singular)) index.set(singular, type);
+  };
   for (const [type, info] of Object.entries(SECTION_TYPES)) {
-    for (const alias of info.aliases) index.set(normalizeHeading(alias), type);
-    index.set(normalizeHeading(info.label), type);
+    for (const alias of info.aliases) add(alias, type);
+    add(info.label, type);
   }
   return index;
 }
+
+// looks a heading up in both the form given and its singular
+const lookupAlias = (normalized) => ALIAS_INDEX.get(normalized) || ALIAS_INDEX.get(depluralize(normalized));
 
 export function parseResume(extraction, { fileName = "" } = {}) {
   const lines = (extraction.lines || []).filter((line) => line.text?.trim());
@@ -178,6 +192,12 @@ export function parseResume(extraction, { fileName = "" } = {}) {
   doc.template = meta.centeredHeader ? "professional" : "minimal";
   doc.settings.sectionRules = "on";
 
+  // carry the source's own line spacing across, so a resume that was set tight enough to fit two
+  // pages still fits two pages here
+  if (meta.leading) {
+    doc.settings.density = meta.leading < 1.3 ? "tight" : meta.leading > 1.55 ? "roomy" : "normal";
+  }
+
   if ((meta.pages || 1) >= 3) {
     warnings.push({
       level: "info",
@@ -211,20 +231,25 @@ function scoreHeadings(lines) {
     if (line.listLevel != null) return false;
     if (BULLET_PREFIX.test(line.text)) return false;
     if (text.length > 62) return false;
-    if (/[.;,]$/.test(text) && !ALIAS_INDEX.has(normalized)) return false;
-    if (EMAIL.test(text) || DATE_RANGE.test(text)) return false;
+    if (/[.;,]$/.test(text) && !lookupAlias(normalized)) return false;
+    if (EMAIL.test(text) || DATE_RANGE.test(text) || SINGLE_DATE.test(text)) return false;
+    // a column break means the line pairs a title with dates or a location, which is an entry
+    // rather than a section heading. this is what keeps a bold job title out of the heading list
+    if (line.text.includes("\t")) return false;
     // the first line is usually the person's name, so it is protected unless the source marked
     // it as a heading or it matches a known section name outright
-    if (index === 0 && !line.styleHeading && !ALIAS_INDEX.has(normalized)) return false;
+    if (index === 0 && !line.styleHeading && !lookupAlias(normalized)) return false;
 
     let score = 0;
-    if (ALIAS_INDEX.has(normalized)) score += 6;
-    else if (findAliasByWords(normalized)) score += 3.5;
+    if (lookupAlias(normalized)) score += 6;
+    else if (findAliasByWords(normalized)) score += 4;
 
     if (line.styleHeading) score += 4;
-    if (line.allCaps) score += 2;
-    if (line.bold) score += 2;
+    // capitals are the signal that separates a section heading from an emphasised entry title,
+    // since both are usually set in the same heavier font
+    if (line.allCaps) score += 3;
     if (medianSize && line.size > medianSize * 1.12) score += 2;
+    if (line.bold && line.allCaps) score += 1;
     if (text.split(/\s+/).length <= 4) score += 1;
     if (line.gapAbove > (line.size || 10) * 0.7) score += 1;
     if (/^\d/.test(text)) score -= 2;
@@ -237,21 +262,45 @@ function scoreHeadings(lines) {
   });
 }
 
+// an order insensitive match on the whole heading. it deliberately does not accept an alias that
+// merely appears inside the heading: "Honors College" is a school, not the Awards section, and a
+// subset match would call it one
 function findAliasByWords(normalized) {
   const words = new Set(normalized.split(" "));
   for (const [alias, type] of ALIAS_INDEX) {
     const aliasWords = alias.split(" ");
+    if (aliasWords.length !== words.size) continue;
     if (aliasWords.length > words.size) continue;
     if (aliasWords.every((word) => words.has(word))) return type;
   }
   return null;
 }
 
+// the longest alias whose words all appear in the heading, so "Relevant Work Experience" prefers
+// "work experience" over the bare "experience"
+function findAliasWithin(normalized) {
+  const words = new Set(normalized.split(" "));
+  let best = null;
+  for (const [alias, type] of ALIAS_INDEX) {
+    const aliasWords = alias.split(" ");
+    if (aliasWords.length > words.size) continue;
+    if (!aliasWords.every((word) => words.has(word))) continue;
+    if (!best || aliasWords.length > best.length) best = { type, length: aliasWords.length };
+  }
+  return best?.type || null;
+}
+
 function classifyHeading(text) {
   const normalized = normalizeHeading(text);
-  if (ALIAS_INDEX.has(normalized)) return { type: ALIAS_INDEX.get(normalized), confidence: 1 };
+  const exact = lookupAlias(normalized);
+  if (exact) return { type: exact, confidence: 1 };
   const byWords = findAliasByWords(normalized);
   if (byWords) return { type: byWords, confidence: 0.85 };
+  // this heading has already been accepted as a heading, so a contained alias is safe to act on
+  // here even though it is far too loose to decide heading-ness with. "Employment Experience"
+  // and "Relevant Work Experience" both land on experience this way
+  const contained = findAliasWithin(normalized);
+  if (contained) return { type: contained, confidence: 0.8 };
   return { type: "custom", confidence: 0.55 };
 }
 
@@ -320,7 +369,7 @@ function looksLikeName(text) {
   if (text.length > 46 || /\d|@/.test(text)) return false;
   const words = text.replace(/[,.]/g, "").split(/\s+/).filter(Boolean);
   if (words.length < 1 || words.length > 5) return false;
-  if (ALIAS_INDEX.has(normalizeHeading(text))) return false;
+  if (lookupAlias(normalizeHeading(text))) return false;
   const capitalised = words.filter((word) => /^[A-Z]/.test(word) || /^[^a-z]+$/.test(word));
   return capitalised.length >= Math.max(1, words.length - 1);
 }
@@ -429,10 +478,14 @@ function chooseLayout(preferred, lines) {
   const dated = lines.filter((line) => DATE_RANGE.test(line.text) || SINGLE_DATE.test(line.text)).length;
   const bulleted = lines.filter((line) => line.listLevel != null || BULLET_PREFIX.test(line.text)).length;
   const labelled = lines.filter((line) => /^[^:]{2,32}:\s*\S/.test(line.text)).length;
+  // an emphasised, unbulleted line is an entry head even when the section carries no dates, which
+  // is how a projects or involvement section is usually written
+  const heads = lines.filter((line) =>
+    (line.bold || line.text.includes("\t")) && line.listLevel == null && !BULLET_PREFIX.test(line.text)).length;
 
   if (preferred === "inline") return labelled >= 1 || lines.length <= 6 ? "inline" : "bullets";
   if (preferred === "prose") return lines.length > 6 && bulleted > lines.length / 2 ? "bullets" : "prose";
-  if (preferred === "entries") return dated === 0 && bulleted >= lines.length * 0.7 ? "bullets" : "entries";
+  if (preferred === "entries") return dated === 0 && heads === 0 && bulleted >= lines.length * 0.7 ? "bullets" : "entries";
   if (preferred === "bullets" && dated >= 2 && bulleted < lines.length * 0.5) return "entries";
   return preferred;
 }
@@ -459,21 +512,38 @@ function parseEntries(lines) {
 
     if (isBullet) {
       if (!current) push({ title: "" });
-      current.bullets.push(flatten(text));
+      // a column break inside a bullet is a right hand date, as in "President<tab>Fall 2026".
+      // it is kept so the renderer can set it against the right margin the way the source did
+      current.bullets.push(keepTail(text));
       afterMarkedBullet = true;
       continue;
     }
 
-    // a long bullet wraps onto the next visual line with no marker of its own. a column break
-    // rules it out, since a wrapped sentence never contains one
-    if (afterMarkedBullet && current?.bullets.length && !text.includes("\t")) {
+    const dates = extractDates(text);
+
+    // a long bullet wraps onto the next visual line with no marker of its own. emphasis, a column
+    // break or a date all rule it out: a wrapped sentence carries none of them, whereas the next
+    // entry's title carries at least one
+    const isWrap = afterMarkedBullet
+      && current?.bullets.length
+      && !line.bold
+      && !dates
+      && !text.includes("\t");
+    if (isWrap) {
       const list = current.bullets;
       list[list.length - 1] = joinWrapped([list[list.length - 1], flatten(text)]);
       continue;
     }
     afterMarkedBullet = false;
 
-    const dates = extractDates(text);
+    // a line that is nothing but a date range belongs to the entry above it. some templates put a
+    // long title on one line and its dates on the next instead of using a column
+    const dateOnly = dates && !text.replace(dates.matched, " ").replace(EDGE_PUNCT, "").trim();
+    if (dateOnly && current && !current.start && !current.end) {
+      current.start = dates.start;
+      current.end = dates.end;
+      continue;
+    }
 
     // an undated, multi column row right under a head that still has no organisation is the
     // second row of that head, not a new entry. templates split "role / dates" and "employer /
@@ -556,6 +626,17 @@ function extractDates(text) {
   return null;
 }
 
+// splits a head into columns without cutting inside brackets. a title like "Data Patterns in
+// Unintended RF Emanations (INSURE - NSA)" contains a separator that belongs to the title, and
+// splitting on it strands half the name in the organisation field
+const GUARD = chars(0xe000);
+const COLUMN_SPLIT = new RegExp(`\\s*[|${SEPARATORS}]\\s*|\\s{3,}|\\s+[${DASHES}]\\s+`);
+
+function splitGuarded(text) {
+  const masked = text.replace(/[([][^()[\]]*[)\]]/g, (group) => group.replace(/[^\S\n]/g, GUARD));
+  return masked.split(COLUMN_SPLIT).map((part) => part.split(GUARD).join(" "));
+}
+
 function tidyDate(value) {
   const text = cleanText(value).replace(/[.,]+$/, "").trim();
   if (/^(present|current|now|ongoing|to date)$/i.test(text)) return "Present";
@@ -581,8 +662,7 @@ function splitEntryHead(text, dates) {
   // a tab is a column break the source actually had, so it wins. only when there is none do we
   // guess at columns from pipes, bullets or a run of spaces
   const hasColumns = rest.includes("\t");
-  const parts = rest
-    .split(hasColumns ? /\t+/ : new RegExp(`\\s*[|${SEPARATORS}]\\s*|\\s{3,}|\\s+[${DASHES}]\\s+`))
+  const parts = (hasColumns ? rest.split(/\t+/) : splitGuarded(rest))
     .map((part) => cleanText(part).replace(EDGE_PUNCT, "").trim())
     .filter(Boolean);
 
@@ -695,6 +775,15 @@ function parseGroups(lines) {
 // prose or a bullet is flattened first
 const stripBullet = (text) => cleanLine(text).replace(BULLET_PREFIX, "").trim();
 const flatten = (text) => String(text).replace(/\t+/g, " ").replace(/ {2,}/g, " ").trim();
+
+// keeps a single trailing column so a bullet can carry a right aligned tail, and flattens any
+// others, since more than one column inside a bullet is extraction noise rather than layout
+function keepTail(text) {
+  const parts = String(text).split(/\t+/).map((part) => part.trim()).filter(Boolean);
+  if (parts.length < 2) return flatten(text);
+  const tail = parts.pop();
+  return `${parts.join(" ")}\t${tail}`;
+}
 
 // joins wrapped lines back into a paragraph. PDF extraction preserves the hyphen a typesetter
 // used to break a word across lines, so "cyber-" followed by "security" has to rejoin as
