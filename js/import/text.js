@@ -29,7 +29,9 @@ export function extractText(source, { markdown = false } = {}) {
     if (markdown) {
       const heading = text.match(/^\s{0,3}(#{1,4})\s+(.*)$/);
       if (heading) {
-        styleHeading = true;
+        // a single hash is the document title, which on a resume is the person's name. only the
+        // deeper levels are section headings, so an h1 is left to the contact reader
+        styleHeading = heading[1].length > 1;
         text = heading[2];
       }
       const bullet = text.match(/^(\s*)[-*+]\s+(.*)$/);

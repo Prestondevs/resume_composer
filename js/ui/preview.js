@@ -7,6 +7,7 @@ import { atsReport } from "../analysis/review.js";
 import { documentText } from "../schema.js";
 
 const ZOOM_STEPS = [0.5, 0.75, 1, 1.25, 1.5];
+const SEPARATOR = "  ·  ";
 
 export class PreviewView {
   constructor({ canvas, scroll, atsOut, meta, zoomSelect, zoomIn, zoomOut, modeButtons, onFocusSection, onImport, onStart }) {
@@ -60,7 +61,11 @@ export class PreviewView {
       const width = this.scroll.clientWidth;
       if (Math.abs(width - this.lastFitWidth) < 2) return;
       this.lastFitWidth = width;
-      this.applyZoom();
+      // resizing the canvas from inside the callback would resize an element the observer is
+      // watching, which the browser reports as an undelivered notification loop. deferring to the
+      // next frame keeps the work outside the observation pass
+      cancelAnimationFrame(this.fitFrame);
+      this.fitFrame = requestAnimationFrame(() => this.applyZoom());
     });
     this.resizeObserver.observe(this.scroll);
   }
@@ -197,17 +202,14 @@ export class PreviewView {
       `${text.replace(/\s/g, "").length} characters`,
     ];
 
-    bits.forEach((bit, index) => {
-      if (index) this.meta.appendChild(h("span", { class: "dot", "aria-hidden": "true" }));
-      this.meta.appendChild(h("span", null, bit));
-    });
+    // the separator is real text, not an empty styled element. an element only carries the gap
+    // visually, so anything reading the bar back gets "2 pages578 words3758 characters"
+    this.meta.appendChild(document.createTextNode(bits.join(SEPARATOR)));
 
-    if (overflowing) {
-      this.meta.appendChild(h("span", { class: "dot", "aria-hidden": "true" }));
-      this.meta.appendChild(h("span", { class: "over" }, "content runs past one page"));
-    } else if (pages > 2) {
-      this.meta.appendChild(h("span", { class: "dot", "aria-hidden": "true" }));
-      this.meta.appendChild(h("span", { class: "over" }, "over two pages"));
+    const warning = overflowing ? "content runs past one page" : pages > 2 ? "over two pages" : "";
+    if (warning) {
+      this.meta.appendChild(document.createTextNode(SEPARATOR));
+      this.meta.appendChild(h("span", { class: "over" }, warning));
     }
   }
 

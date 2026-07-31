@@ -312,7 +312,12 @@
   max-width: calc(100vw - 32px);
 }
 .viewbar-rule { width: 1px; height: 16px; background: var(--line); flex: none; }
-.viewbar-meta { font-size: 11.5px; color: var(--ink-4); white-space: nowrap; padding-right: 4px; }
+.viewbar-meta {
+  font-size: 11.5px;
+  color: var(--ink-4);
+  white-space: pre;
+  padding-right: 4px;
+}
 .viewbar-meta .over { color: var(--warn); }
 .zoom-select {
   appearance: none;

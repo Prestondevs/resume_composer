@@ -19,6 +19,9 @@ async function detectKind(file) {
   if (header[0] === 0xd0 && header[1] === 0xcf) return "doc";
 
   const name = file.name.toLowerCase();
+  // a word processor format we cannot read is worth naming, because falling through to the text
+  // reader would turn it into a screenful of binary rather than an explanation
+  if (/\.(doc|rtf|odt|pages|wpd)$/.test(name)) return "doc";
   if (name.endsWith(".tex") || name.endsWith(".latex")) return "latex";
   if (name.endsWith(".md") || name.endsWith(".markdown")) return "markdown";
   if (name.endsWith(".pdf")) return "pdf";
@@ -44,7 +47,7 @@ export async function importFile(file, onProgress = () => {}) {
   const kind = await detectKind(file);
 
   if (kind === "doc") {
-    throw new Error("Legacy .doc files are not supported. Open it in Word and save as .docx, or export a PDF.");
+    throw new Error(`"${file.name}" is a format this cannot read. Open it and save as .docx, or export a PDF.`);
   }
 
   let extraction;

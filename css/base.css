@@ -402,6 +402,7 @@ kbd {
 .toast-text { font-size: var(--step--1); line-height: 1.45; }
 .toast-text strong { display: block; font-weight: 600; margin-bottom: 1px; }
 .toast-text span { color: var(--ink-2); }
+.toast-good .toast-text strong { color: var(--good); }
 .toast-warn .toast-text strong { color: var(--warn); }
 .toast-bad .toast-text strong { color: var(--bad); }
 .toast-act {

@@ -676,12 +676,13 @@ function splitEntryHead(text, dates) {
   }
 
   if (parts.length === 1) {
-    const commaSplit = parts[0].split(/,\s+/);
+    // removing the dates can leave a dangling comma behind, so each half is trimmed again
+    const commaSplit = parts[0].split(/,\s+/).map((piece) => piece.replace(EDGE_PUNCT, "").trim());
     if (commaSplit.length === 2 && commaSplit.every((piece) => piece.length > 2)) {
       head.title = commaSplit[0];
       head.org = commaSplit[1];
     } else {
-      head.title = parts[0];
+      head.title = parts[0].replace(EDGE_PUNCT, "").trim();
     }
   } else if (hasColumns) {
     // in a real two column row the right hand side is a detail such as a tech stack, not the
