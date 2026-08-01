@@ -19,7 +19,8 @@ export const TOOL_PANELS = [
 
 // groups that start open the first time a panel is opened
 const DEFAULT_OPEN = new Set([
-  "lib-add", "lib-hidden", "design-layout", "design-font", "opt-job", "opt-tips", "rev-score", "rev-tips", "ver-list",
+  "lib-add", "lib-hidden", "design-layout", "design-font", "design-page",
+  "opt-job", "opt-tips", "rev-score", "rev-tips", "ver-list",
 ]);
 
 export class PanelHost {

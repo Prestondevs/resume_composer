@@ -66,6 +66,28 @@
 .canvas-empty p { font-size: var(--step--1); line-height: 1.55; }
 .canvas-empty .btn { margin-top: 4px; }
 
+/* every piece of text on the page is edited in place. the affordance stays quiet until the
+   pointer is over it, so the page still reads as a document rather than a form */
+.r-edit {
+  outline: none;
+  border-radius: 2px;
+  box-shadow: 0 0 0 0 transparent;
+  transition: background var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+  cursor: text;
+}
+.r-edit:hover { background: rgba(20, 20, 24, 0.055); }
+.r-edit:focus {
+  background: rgba(20, 20, 24, 0.05);
+  box-shadow: 0 0 0 2px rgba(20, 20, 24, 0.28);
+}
+.r-edit:empty::before {
+  content: attr(data-placeholder);
+  color: rgba(20, 20, 24, 0.35);
+}
+a.r-edit { text-decoration: none; }
+/* the whole block highlight would fight the per-field one */
+.r-section[data-jump]:hover:has(.r-edit:hover)::before { background: transparent; }
+
 /* clicking a block in the page focuses its card */
 .r-section { position: relative; }
 .r-section[data-jump] { cursor: pointer; }

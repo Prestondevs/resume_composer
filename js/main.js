@@ -1,5 +1,5 @@
 import { h, qs, qsa, icon, announce, clear } from "./lib/dom.js";
-import { debounce, plural } from "./lib/util.js";
+import { debounce, plural, clamp } from "./lib/util.js";
 import { store } from "./store.js";
 import { typeInfo, blankDocument, isSectionEmpty, TEMPLATES } from "./schema.js";
 import { CardsView } from "./ui/cards.js";
@@ -111,6 +111,8 @@ function cacheElements() {
     dockRightToggle: qs("#dock-right-toggle"),
     dockLeftHandle: qs("#dock-left-handle"),
     dockRightHandle: qs("#dock-right-handle"),
+    dockLeftResize: qs("#dock-left-resize"),
+    dockRightResize: qs("#dock-right-resize"),
     dockRightHandleLabel: qs("#dock-right-handle-label"),
     dockLeftCount: qs("#dock-left-count"),
     dockRightTitle: qs("#dock-right-title"),
@@ -167,6 +169,12 @@ function onStoreChange(event) {
     case "edit":
       cards.refreshHeaders(event.changed);
       preview.render();
+      panels.invalidate();
+      paintChrome();
+      break;
+    // the edit came from the page itself, so the cards follow it rather than the other way round
+    case "page-edit":
+      cards.render();
       panels.invalidate();
       paintChrome();
       break;
@@ -235,7 +243,23 @@ function wireTopbar() {
 
   el.undoBtn.addEventListener("click", doUndo);
   el.redoBtn.addEventListener("click", doRedo);
-  el.importBtn.addEventListener("click", () => el.fileInput.click());
+  el.importBtn.addEventListener("click", (event) => {
+    openMenu(event.currentTarget, [
+      { heading: "Import" },
+      {
+        label: "From a file",
+        icon: icon("download", 15),
+        hint: "PDF, Word, LaTeX, Markdown, text",
+        onClick: () => el.fileInput.click(),
+      },
+      {
+        label: "Paste LaTeX source",
+        icon: icon("file", 15),
+        hint: "Compile it here",
+        onClick: () => openLatexDialog(),
+      },
+    ], { align: "end" });
+  });
   el.exportBtn.addEventListener("click", (event) => openExportMenu(event.currentTarget));
   el.paletteBtn.addEventListener("click", () => openPalette(buildCommands));
 
@@ -288,6 +312,9 @@ function wireDocks() {
     }, icon(tool.icon, 15), h("span", null, tool.label)));
   }
 
+  wireDockResize("left", el.dockLeftResize);
+  wireDockResize("right", el.dockRightResize);
+
   el.collapseAllBtn.addEventListener("click", () => {
     const anyOpen = store.doc.sections.some((section) => !section.collapsed);
     store.touch((doc) => {
@@ -296,6 +323,70 @@ function wireDocks() {
     cards.render();
     announce(anyOpen ? "All cards collapsed" : "All cards expanded");
   });
+}
+
+const DOCK_MIN = 244;
+const DOCK_MAX = 620;
+const dockWidthKey = (side) => (side === "left" ? "leftWidth" : "rightWidth");
+
+// the left dock grows to the right and the right dock grows to the left, so the pointer delta is
+// inverted for one of them
+function wireDockResize(side, grip) {
+  const key = dockWidthKey(side);
+  let startX = 0;
+  let startWidth = 0;
+  let dragging = false;
+
+  const widthFor = (clientX) => {
+    const delta = side === "left" ? clientX - startX : startX - clientX;
+    return clamp(Math.round(startWidth + delta), DOCK_MIN, Math.min(DOCK_MAX, window.innerWidth - 120));
+  };
+
+  grip.addEventListener("pointerdown", (event) => {
+    dragging = true;
+    startX = event.clientX;
+    startWidth = store.ui[key] || 322;
+    grip.setPointerCapture(event.pointerId);
+    grip.classList.add("is-dragging");
+    document.body.classList.add("is-resizing");
+    event.preventDefault();
+  });
+
+  grip.addEventListener("pointermove", (event) => {
+    if (!dragging) return;
+    store.ui[key] = widthFor(event.clientX);
+    applyDockWidths();
+  });
+
+  const end = () => {
+    if (!dragging) return;
+    dragging = false;
+    grip.classList.remove("is-dragging");
+    document.body.classList.remove("is-resizing");
+    // one commit at the end rather than one per pointer move
+    store.setUi({ [key]: store.ui[key] }, { reason: "zoom" });
+  };
+  grip.addEventListener("pointerup", end);
+  grip.addEventListener("pointercancel", end);
+
+  grip.addEventListener("keydown", (event) => {
+    const step = event.shiftKey ? 40 : 12;
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+    event.preventDefault();
+    const outward = side === "left" ? event.key === "ArrowRight" : event.key === "ArrowLeft";
+    const next = clamp((store.ui[key] || 322) + (outward ? step : -step), DOCK_MIN, DOCK_MAX);
+    store.setUi({ [key]: next }, { reason: "zoom" });
+    applyDockWidths();
+  });
+}
+
+function applyDockWidths() {
+  for (const [side, dock] of [["left", el.dockLeft], ["right", el.dockRight]]) {
+    const width = clamp(store.ui[dockWidthKey(side)] || 322, DOCK_MIN, DOCK_MAX);
+    dock.style.width = `${width}px`;
+    // labels on every tab only fit once the dock has room for them
+    dock.dataset.wide = String(width >= 360);
+  }
 }
 
 function toggleDock(side) {
@@ -312,6 +403,8 @@ function toggleDock(side) {
 function applyUi() {
   const leftOpen = store.ui.leftOpen !== false;
   const rightOpen = store.ui.rightOpen !== false;
+
+  applyDockWidths();
 
   el.dockLeft.dataset.collapsed = String(!leftOpen);
   el.dockRight.dataset.collapsed = String(!rightOpen);
@@ -424,6 +517,37 @@ async function runImport(file) {
 
   renderAll();
   reportImport(result, file);
+}
+
+// paste a .tex source straight in. it runs through the same reader the .tex file path uses, so
+// there is one implementation of the LaTeX handling rather than two
+async function openLatexDialog() {
+  let box;
+  const source = await openDialog({
+    title: "Paste LaTeX source",
+    description: "The body is read directly. Nothing is uploaded and no TeX distribution is needed.",
+    width: 680,
+    body: () => {
+      box = h("textarea", {
+        class: "textarea",
+        rows: 16,
+        spellcheck: "false",
+        "data-autofocus": "1",
+        placeholder: "\\documentclass{article}\n\\begin{document}\n...\n\\end{document}",
+        style: { fontFamily: "ui-monospace, Consolas, monospace", fontSize: "12px", lineHeight: "1.5", minHeight: "320px" },
+      });
+      return h("div", { class: "field" }, box);
+    },
+    actions: [
+      { label: "Cancel", variant: "btn-ghost", value: null },
+      { label: "Compile", variant: "btn-primary", onClick: (done) => done(box.value) },
+    ],
+  });
+
+  if (!source || !source.trim()) return;
+
+  const name = /\\documentclass/.test(source) ? "pasted.tex" : "pasted.txt";
+  await runImport(new File([new Blob([source], { type: "text/plain" })], name));
 }
 
 function reportImport(result, file) {
@@ -566,6 +690,7 @@ function buildCommands() {
   const doc = store.doc;
   const commands = [
     { id: "import", title: "Import a resume", subtitle: "PDF, Word, LaTeX, Markdown or text", group: "Actions", icon: "download", keys: ["Ctrl O"], run: () => el.fileInput.click() },
+    { id: "import-latex", title: "Paste LaTeX source", subtitle: "Compile a .tex body here", group: "Actions", icon: "file", run: () => openLatexDialog() },
     ...EXPORT_FORMATS.map((format) => ({
       id: `export-${format.id}`,
       title: `Export as ${format.label}`,

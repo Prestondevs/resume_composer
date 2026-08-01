@@ -15,6 +15,8 @@ const defaultUi = {
   panel: "sections",
   leftOpen: true,
   rightOpen: true,
+  leftWidth: 322,
+  rightWidth: 322,
   zoom: "fit",
   view: "paper",
   // open state of the collapsible groups inside the tool panels, keyed by group id

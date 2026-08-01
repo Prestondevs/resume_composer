@@ -5,6 +5,7 @@ import { renderResume, renderEmptyState, pageMetrics } from "../templates/render
 import { toPlainText } from "../export/serialize.js";
 import { atsReport } from "../analysis/review.js";
 import { documentText } from "../schema.js";
+import { attachPageEditing } from "./pageEdit.js";
 
 const ZOOM_STEPS = [0.5, 0.75, 1, 1.25, 1.5];
 const SEPARATOR = "  ·  ";
@@ -25,6 +26,21 @@ export class PreviewView {
 
     this.lastResult = { pages: 0 };
     this.schedule = throttleFrame(() => this.paint());
+
+    // typing on the page must not repaint the page, or the caret is lost on every keystroke. the
+    // repaint is deferred until focus leaves, and only then if something actually changed
+    this.editing = false;
+    this.pendingRepaint = false;
+    attachPageEditing(this.canvas, {
+      onEdit: () => { this.pendingRepaint = true; this.paintMeta(store.doc); },
+      onFocusChange: (editing) => {
+        this.editing = editing;
+        if (!editing && this.pendingRepaint) {
+          this.pendingRepaint = false;
+          this.render();
+        }
+      },
+    });
 
     zoomSelect.addEventListener("change", () => {
       const value = zoomSelect.value;
@@ -113,6 +129,12 @@ export class PreviewView {
   }
 
   render() {
+    // a repaint while the caret is on the page would rebuild the node being typed into
+    if (this.editing) {
+      this.pendingRepaint = true;
+      this.paintMeta(store.doc);
+      return;
+    }
     this.schedule();
   }
 

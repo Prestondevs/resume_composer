@@ -149,6 +149,38 @@
 .dock-handle svg { color: var(--ink-4); }
 .dock-handle:hover { background: var(--surface); color: var(--ink); }
 .dock-handle:hover svg { color: var(--ink-2); }
+
+/* drag the inner edge to resize; the grip sits half outside so it is easy to hit */
+.dock-resize {
+  pointer-events: auto;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 10px;
+  cursor: col-resize;
+  touch-action: none;
+  z-index: 2;
+}
+.dock-left .dock-resize { right: -5px; }
+.dock-right .dock-resize { left: -5px; }
+.dock-resize::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 3px;
+  height: 34px;
+  margin: -17px 0 0 -1.5px;
+  border-radius: var(--r-pill);
+  background: var(--line-strong);
+  opacity: 0;
+  transition: opacity var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+.dock-resize:hover::after,
+.dock-resize:focus-visible::after,
+.dock-resize.is-dragging::after { opacity: 1; background: var(--ink-4); }
+.dock[data-collapsed="true"] .dock-resize { display: none; }
+body.is-resizing { cursor: col-resize; user-select: none; }
 .dock-left .dock-handle { left: 0; transform: translateX(calc(-100% - var(--sp-4))); }
 .dock-right .dock-handle { right: 0; transform: translateX(calc(100% + var(--sp-4))); }
 .dock-right .dock-handle svg { order: 2; }
@@ -196,12 +228,15 @@
 }
 .dock-tabs::-webkit-scrollbar { display: none; }
 
+/* six tabs never fit a narrow dock, and letting them scroll hid the last one behind the edge.
+   only the selected tab carries its label; the rest are icons, and the dock header names the
+   panel anyway */
 .dock-tab {
   display: flex;
   align-items: center;
   gap: 6px;
   height: 27px;
-  padding: 0 10px;
+  padding: 0 7px;
   border-radius: var(--r-sm);
   font-size: 12.5px;
   font-weight: 500;
@@ -210,8 +245,17 @@
   transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
 }
 .dock-tab:hover { background: var(--surface-3); color: var(--ink); }
-.dock-tab[aria-selected="true"] { background: var(--accent); color: var(--accent-ink); }
+.dock-tab[aria-selected="true"] {
+  background: var(--accent);
+  color: var(--accent-ink);
+  padding: 0 10px;
+}
 .dock-tab svg { flex: none; }
+.dock-tab span { display: none; }
+.dock-tab[aria-selected="true"] span { display: inline; }
+/* once the dock is wide enough, every tab can show its name */
+.dock[data-wide="true"] .dock-tab span { display: inline; }
+.dock[data-wide="true"] .dock-tab { padding: 0 9px; }
 
 /* panel content */
 

@@ -47,6 +47,13 @@
 
   .print-root a { text-decoration: none; color: inherit; }
 
+  /* the editing affordances are screen only */
+  .print-root .r-edit {
+    background: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+  }
+
   /* some templates rely on a tinted panel; without this the browser drops it */
   .print-root [data-template="sidebar"] .r-col-aside,
   .print-root [data-template="sidebar"] .r-page::before {

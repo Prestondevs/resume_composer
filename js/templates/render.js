@@ -81,19 +81,36 @@ export function activeFontLabel(doc) {
 
 const isTwoColumn = (templateId) => (TEMPLATES.find((t) => t.id === templateId)?.columns || 1) === 2;
 
+// every piece of text on the page is edited in place, so each one records where its value lives
+// in the document. preview.js reads these back when the text changes
+function edit(className, kind, ids = {}) {
+  return {
+    class: className ? `${className} r-edit` : "r-edit",
+    contenteditable: "plaintext-only",
+    spellcheck: "false",
+    "data-edit": kind,
+    "data-section": ids.section ?? null,
+    "data-item": ids.item ?? null,
+    "data-field": ids.field ?? null,
+    "data-index": ids.index == null ? null : String(ids.index),
+  };
+}
+
 // block builders
 
 function buildContact(section) {
   const c = section.contact || {};
+  const id = section.id;
   const bits = [];
-  if (c.email) bits.push(h("a", { href: `mailto:${c.email}` }, c.email));
-  if (c.phone) bits.push(h("span", null, c.phone));
-  if (c.location) bits.push(h("span", null, c.location));
-  for (const link of c.links || []) {
-    if (!link.url && !link.label) continue;
+  if (c.email) bits.push(h("a", { href: `mailto:${c.email}`, ...edit("", "contact", { section: id, field: "email" }) }, c.email));
+  if (c.phone) bits.push(h("span", edit("", "contact", { section: id, field: "phone" }), c.phone));
+  if (c.location) bits.push(h("span", edit("", "contact", { section: id, field: "location" }), c.location));
+  (c.links || []).forEach((link, index) => {
+    if (!link.url && !link.label) return;
     const href = /^https?:\/\//i.test(link.url) ? link.url : `https://${link.url}`;
-    bits.push(h("a", { href, rel: "noreferrer" }, link.label || displayUrl(link.url)));
-  }
+    bits.push(h("a", { href, rel: "noreferrer", ...edit("", "link", { section: id, index }) },
+      link.label || displayUrl(link.url)));
+  });
 
   const line = h("div", { class: "r-contact-line" });
   bits.forEach((bit, index) => {
@@ -101,36 +118,42 @@ function buildContact(section) {
     line.appendChild(bit);
   });
 
-  return h("header", { class: "r-contact", "data-section": section.id },
-    c.name && h("div", { class: "r-name" }, c.name),
-    c.headline && h("div", { class: "r-headline" }, c.headline),
+  return h("header", { class: "r-contact", "data-section": id },
+    c.name && h("div", edit("r-name", "contact", { section: id, field: "name" }), c.name),
+    c.headline && h("div", edit("r-headline", "contact", { section: id, field: "headline" }), c.headline),
     bits.length ? line : null,
   );
 }
 
 const displayUrl = (url) => String(url).replace(/^https?:\/\//i, "").replace(/^www\./i, "").replace(/\/$/, "");
 
-function buildEntry(item, templateId) {
+function buildEntry(item, templateId, sectionId) {
   const stacked = templateId === "academic" || templateId === "ats";
   const dates = [item.start, item.end].filter(Boolean).join(" - ");
+  const ids = { section: sectionId, item: item.id };
 
   const aside = (dates || item.location)
     ? h("div", { class: "r-entry-aside" },
-        dates && h("span", { class: "r-dates" }, dates),
-        item.location && h("span", { class: "r-loc" }, item.location))
+        dates && h("span", edit("r-dates", "dates", ids), dates),
+        item.location && h("span", edit("r-loc", "item", { ...ids, field: "location" }), item.location))
     : null;
 
   return h("article", { class: "r-entry" },
     (item.title || item.org || aside) && h("div", { class: "r-entry-top" },
       h("div", { class: `r-entry-lead${stacked ? " stacked" : ""}` },
-        item.title && h("span", { class: "r-title" }, item.title),
-        item.org && h("span", { class: "r-org" }, item.org)),
+        item.title && h("span", edit("r-title", "item", { ...ids, field: "title" }), item.title),
+        item.org && h("span", edit("r-org", "item", { ...ids, field: "org" }), item.org)),
       aside),
     // detail lines keep the line structure they had in the source
-    ...metaLines(item).map((line) => h("div", { class: "r-meta" }, line)),
+    ...metaLines(item).map((line, index) => h("div", edit("r-meta", "meta", { ...ids, index }), line)),
     item.link && h("div", null, h("a", { class: "r-link", href: absoluteUrl(item.link), rel: "noreferrer" }, displayUrl(item.link))),
+    // the index passed through is the one in the stored array, not in the filtered list, so an
+    // edit lands on the right bullet even when blank ones sit between them
     item.bullets?.some((line) => line.trim())
-      ? h("ul", { class: "r-bullets" }, item.bullets.filter((line) => line.trim()).map(bulletItem))
+      ? h("ul", { class: "r-bullets" }, item.bullets
+          .map((line, index) => [line, index])
+          .filter(([line]) => line.trim())
+          .map(([line, index]) => bulletItem(line, { ...ids, index })))
       : null,
   );
 }
@@ -139,13 +162,15 @@ const absoluteUrl = (url) => (/^https?:\/\//i.test(url) ? url : `https://${url}`
 
 export const metaLines = (item) => String(item.meta || "").split("\n").map((line) => line.trim()).filter(Boolean);
 
-// a bullet may carry a trailing column, which the source set against the right margin
-export function bulletItem(line) {
+// a bullet may carry a trailing column, which the source set against the right margin. the two
+// halves are edited separately and recombined around the tab on write back
+export function bulletItem(line, ids) {
+  const kind = ids?.item ? "bullet" : "sectionBullet";
   const at = line.indexOf("\t");
-  if (at === -1) return h("li", null, line);
+  if (at === -1) return h("li", edit("", kind, ids), line);
   return h("li", { class: "has-tail" },
-    h("span", { class: "r-bullet-text" }, line.slice(0, at).trim()),
-    h("span", { class: "r-bullet-tail" }, line.slice(at + 1).trim()));
+    h("span", edit("r-bullet-text", kind, { ...ids, field: "text" }), line.slice(0, at).trim()),
+    h("span", edit("r-bullet-tail", kind, { ...ids, field: "tail" }), line.slice(at + 1).trim()));
 }
 
 // returns the section element plus the child nodes pagination may split on
@@ -156,7 +181,7 @@ function buildSection(section, doc) {
   }
 
   const el = h("section", { class: "r-section", "data-section": section.id, "data-type": section.type, "data-jump": "1" });
-  const head = h("h2", { class: "r-head" }, section.title);
+  const head = h("h2", edit("r-head", "sectionTitle", { section: section.id }), section.title);
   el.appendChild(head);
   const body = h("div", { class: "r-body" });
   el.appendChild(body);
@@ -165,39 +190,41 @@ function buildSection(section, doc) {
 
   if (section.layout === "entries") {
     for (const item of section.items || []) {
-      const entry = buildEntry(item, doc.template);
+      const entry = buildEntry(item, doc.template, section.id);
       body.appendChild(entry);
       units.push(entry);
     }
   } else if (section.layout === "bullets") {
     const list = h("ul", { class: "r-flat" });
-    for (const line of section.bullets || []) {
-      if (!line.trim()) continue;
-      const li = bulletItem(line);
+    (section.bullets || []).forEach((line, index) => {
+      if (!line.trim()) return;
+      const li = bulletItem(line, { section: section.id, index });
       list.appendChild(li);
       units.push(li);
-    }
+    });
     body.appendChild(list);
   } else if (section.layout === "inline") {
-    const groups = (section.groups || []).filter((group) => group.items?.trim());
-    const hasLabels = groups.some((group) => group.label?.trim());
+    const groups = (section.groups || [])
+      .map((group, index) => [group, index])
+      .filter(([group]) => group.items?.trim());
+    const hasLabels = groups.some(([group]) => group.label?.trim());
     const wrap = h("div", { class: `r-inline-groups${hasLabels ? "" : " no-labels"}` });
-    for (const group of groups) {
+    for (const [group, index] of groups) {
       const row = h("div", { class: "r-group" },
-        h("span", { class: "r-group-label" }, group.label || ""),
-        h("span", { class: "r-group-items" }, group.items));
+        h("span", edit("r-group-label", "group", { section: section.id, index, field: "label" }), group.label || ""),
+        h("span", edit("r-group-items", "group", { section: section.id, index, field: "items" }), group.items));
       wrap.appendChild(row);
       units.push(row);
     }
     body.appendChild(wrap);
   } else if (section.layout === "prose") {
     const prose = h("div", { class: "r-prose" });
-    for (const paragraph of (section.body || "").split(/\n{2,}/)) {
-      if (!paragraph.trim()) continue;
-      const p = h("p", null, paragraph.trim());
+    (section.body || "").split(/\n{2,}/).forEach((paragraph, index) => {
+      if (!paragraph.trim()) return;
+      const p = h("p", edit("", "prose", { section: section.id, index }), paragraph.trim());
       prose.appendChild(p);
       units.push(p);
-    }
+    });
     body.appendChild(prose);
   }
 

@@ -10,6 +10,10 @@ import { resolveFont } from "./fonts.js";
 
 // escaped specials are parked under sentinels so later brace and macro stripping cannot
 // eat them, then restored once the line is otherwise clean
+// plain ASCII so it survives brace stripping, macro stripping and whitespace cleanup
+const BOLD_OPEN = "@@B@@";
+const BOLD_CLOSE = "@@/B@@";
+
 const ESCAPED = [
   ["\\\\&", "@@AMP@@", "&"],
   ["\\\\%", "@@PCT@@", "%"],
@@ -122,6 +126,13 @@ export function extractLatex(source) {
 
   body = expandAccents(body);
   body = dropMacros(body);
+  // \textbf is what a LaTeX resume uses for a section heading and for an entry title, and
+  // unwrapping it would throw that away. the marker survives the unwrap and is read back when the
+  // line is emitted, which is the same signal the PDF reader gets from the font
+  body = body.replace(
+    /\\(?:textbf|bfseries|textsc|scshape|bf)\s*\{([^{}]*)\}/g,
+    (_, inner) => `${BOLD_OPEN}${inner}${BOLD_CLOSE}`,
+  );
   body = unwrapMacros(body);
 
   const lines = [];
@@ -141,6 +152,12 @@ export function extractLatex(source) {
       .replace(/[{}]/g, " ");
 
     for (const [, token, char] of ESCAPED) text = text.split(token).join(char);
+
+    // emphasis is read before the markers are removed, and a marker anywhere on a line that is
+    // not a list item means the line is a heading or an entry title
+    const emphasised = text.includes(BOLD_OPEN);
+    text = text.split(BOLD_OPEN).join("").split(BOLD_CLOSE).join("");
+
     text = cleanLine(text).trim().replace(/^\t+|\t+$/g, "").trim();
 
     if (!text) { blankRun += 1; return; }
@@ -148,7 +165,7 @@ export function extractLatex(source) {
     lines.push({
       text,
       size: heading ? 13 : sub ? 11.5 : 10,
-      bold: sub || (!item && !heading && /\t/.test(text)),
+      bold: sub || (!item && emphasised) || (!item && !heading && /\t/.test(text)),
       allCaps: /^[^a-z]{3,}$/.test(text) && text.length < 46,
       // a custom macro such as \resumeItem loses its \item, so anything inside an itemize with no
       // tab separated fields counts as a list entry too
