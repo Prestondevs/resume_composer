@@ -1,7 +1,11 @@
 import { h, clear, icon } from "../lib/dom.js";
 import { fuzzyMatch, plural, formatRelative, debounce, escapeHtml } from "../lib/util.js";
 import { store } from "../store.js";
-import { SECTION_TYPES, LIBRARY_ORDER, TEMPLATES, PAGE_SIZES, MARGINS, FONT_CHOICES, typeInfo, isSectionEmpty } from "../schema.js";
+import {
+  SECTION_TYPES, LIBRARY_ORDER, TEMPLATES, PAGE_SIZES, MARGINS, FONT_CHOICES,
+  HEADER_STYLES, DIVIDERS, BULLETS, DATE_FORMATS, LOCATION_FORMATS, SPACE_STEPS,
+  typeInfo, isSectionEmpty, applyTemplate, defaultStyle,
+} from "../schema.js";
 import { reviewDocument } from "../analysis/review.js";
 import { activeFontLabel } from "../templates/render.js";
 import { openMenu, promptDialog, confirmDialog } from "./overlay.js";
@@ -210,7 +214,7 @@ export class PanelHost {
     const layouts = this.group("design-layout", "Layout", TEMPLATES.find((t) => t.id === doc.template)?.name, () =>
       h("div", { style: { display: "grid", gap: "4px" } }, TEMPLATES.map((template) => h("button", {
         class: `ver-item${doc.template === template.id ? " is-on" : ""}`,
-        onclick: () => store.commit("Change layout", (d) => { d.template = template.id; }),
+        onclick: () => store.commit("Change layout", (d) => applyTemplate(d, template.id)),
       },
         h("span", { class: "lib-glyph" }, template.columns === 2 ? "▥" : "▤"),
         h("span", { class: "ver-body" },
@@ -237,13 +241,130 @@ export class PanelHost {
           [["0.9", "Small"], ["0.95", "Compact"], ["1", "Default"], ["1.05", "Large"], ["1.1", "Larger"]],
           (value) => store.commit("Text size", (d) => { d.settings.scale = Number(value); }))));
 
-    const twoColumn = TEMPLATES.find((t) => t.id === doc.template)?.columns === 2;
-    const note = twoColumn
+    const style = this.group("design-style", "Style", null, () => this.buildStyleControls(doc));
+    const spacing = this.group("design-spacing", "Spacing and type", null, () => this.buildSpacingControls(doc));
+    const colors = this.group("design-colors", "Colours", null, () => this.buildColorControls(doc));
+    const government = this.group("design-gov", "Government fields",
+      doc.settings.governmentFields ? "On" : null, () => this.buildGovernmentControls(doc));
+
+    const template = TEMPLATES.find((t) => t.id === doc.template);
+    const note = template?.ats === false
       ? h("div", { class: "empty-note", style: { marginTop: "12px", textAlign: "left" } },
           "Skills, languages, certifications and interests move to the side column automatically. Two columns can confuse older applicant tracking systems, so check the ATS text view before applying through a portal.")
       : null;
 
-    return this.shell(h("div", null, layouts, fonts, page, note));
+    const reset = h("button", {
+      class: "btn btn-ghost btn-block",
+      onclick: () => store.commit("Reset style", (d) => {
+        d.settings.style = defaultStyle();
+        applyTemplate(d, d.template);
+      }),
+    }, icon("restore", 14), "Reset style to the layout");
+
+    return this.shell(h("div", null, layouts, style, fonts, spacing, colors, page, government, note), reset);
+  }
+
+  // every knob writes into settings.style, and the renderer turns that into custom properties.
+  // nothing here is per template, which is why a choice survives switching layouts
+  styleSetting(doc, label, key, options) {
+    return h("div", { class: "field" },
+      h("label", null, label),
+      h("select", {
+        class: "select",
+        onchange: (event) => store.commit(label, (d) => { d.settings.style[key] = event.target.value; }),
+      }, options.map((option) => h("option", {
+        value: option.id,
+        selected: option.id === doc.settings.style[key],
+      }, option.label))));
+  }
+
+  buildStyleControls(doc) {
+    return h("div", { style: { display: "grid", gap: "10px" } },
+      this.styleSetting(doc, "Header style", "headerStyle", HEADER_STYLES),
+      this.styleSetting(doc, "Section dividers", "divider", DIVIDERS),
+      this.styleSetting(doc, "Bullets", "bullet", BULLETS),
+      this.styleSetting(doc, "Heading alignment", "align",
+        [{ id: "left", label: "Left" }, { id: "center", label: "Centred" }]),
+      this.styleSetting(doc, "Dates", "dateFormat", DATE_FORMATS),
+      this.styleSetting(doc, "Locations", "locationFormat", LOCATION_FORMATS));
+  }
+
+  buildSpacingControls(doc) {
+    const slider = (label, key, min, max, step, suffix = "") => {
+      const value = doc.settings.style[key];
+      const readout = h("span", { class: "field-value" }, `${Math.round(value * 100) / 100}${suffix}`);
+      return h("div", { class: "field" },
+        h("label", null, h("span", null, label), readout),
+        h("input", {
+          class: "range",
+          type: "range",
+          min: String(min), max: String(max), step: String(step),
+          value: String(value),
+          oninput: (event) => {
+            const next = Number(event.target.value);
+            readout.textContent = `${Math.round(next * 100) / 100}${suffix}`;
+            store.commit(label, (d) => { d.settings.style[key] = next; },
+              { coalesce: `style:${key}` });
+          },
+        }));
+    };
+
+    return h("div", { style: { display: "grid", gap: "10px" } },
+      this.styleSetting(doc, "Section spacing", "sectionSpace", SPACE_STEPS),
+      this.styleSetting(doc, "Entry spacing", "entrySpace", SPACE_STEPS),
+      this.styleSetting(doc, "Bullet spacing", "bulletSpace", SPACE_STEPS),
+      slider("Line spacing", "lineHeight", 0.8, 1.6, 0.02),
+      slider("Letter spacing", "letterSpacing", -0.03, 0.12, 0.005, "em"),
+      slider("Heading size", "headingScale", 0.8, 1.5, 0.02));
+  }
+
+  buildColorControls(doc) {
+    const swatch = (label, key, fallbackNote) => {
+      const value = doc.settings.style.colors[key];
+      return h("div", { class: "swatch-row" },
+        h("input", {
+          class: "swatch",
+          type: "color",
+          value: value || "#333333",
+          "aria-label": label,
+          oninput: (event) => store.commit(label, (d) => { d.settings.style.colors[key] = event.target.value; },
+            { coalesce: `color:${key}` }),
+        }),
+        h("span", { class: "swatch-body" },
+          h("span", { class: "swatch-name" }, label),
+          h("span", { class: "swatch-sub" }, value || fallbackNote)),
+        value ? h("button", {
+          class: "icon-btn sm",
+          title: "Use the layout's colour",
+          "aria-label": `Clear ${label}`,
+          onclick: () => store.commit("Clear colour", (d) => { d.settings.style.colors[key] = ""; }),
+        }, icon("x", 14)) : null);
+    };
+
+    return h("div", { style: { display: "grid", gap: "4px" } },
+      swatch("Headings", "heading", "From the layout"),
+      swatch("Body text", "body", "From the layout"),
+      swatch("Accent", "accent", "From the layout"),
+      swatch("Dividers", "divider", "From the layout"));
+  }
+
+  // USAJOBS and most state systems expect hours, salary and a supervisor against each position.
+  // they are off by default because they read as clutter on a private sector resume
+  buildGovernmentControls(doc) {
+    const on = doc.settings.governmentFields;
+    return h("div", { style: { display: "grid", gap: "8px" } },
+      h("button", {
+        class: "switch-row",
+        onclick: () => store.commit("Government fields", (d) => { d.settings.governmentFields = !on; }),
+      },
+        h("span", { class: "switch-body" },
+          h("span", { class: "switch-name" }, "Show government fields"),
+          h("span", { class: "switch-sub" }, "Hours per week, salary, supervisor and contact permission")),
+        h("span", { class: "switch", role: "switch", "aria-checked": String(on) })),
+      h("p", { class: "hint", style: { lineHeight: "1.5" } },
+        on
+          ? "Each experience card gains those fields, and any you fill in print under the position. Leave one blank to leave it off the page."
+          : "Federal and most state applications expect this detail against every position. The Government layout turns it on for you."));
   }
 
   // one control sets the typeface for the whole document. "imported" and "layout default" are

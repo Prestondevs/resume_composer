@@ -1,5 +1,6 @@
 import { h, frag, clear } from "../lib/dom.js";
-import { PAGE_SIZES, MARGINS, TEMPLATES, fontChoice } from "../schema.js";
+import { PAGE_SIZES, MARGINS, TEMPLATES, BULLETS, fontChoice } from "../schema.js";
+import { formatDateRange, formatLocation } from "./format.js";
 
 const DPI = 96;
 
@@ -52,6 +53,24 @@ export function docStyleVars(doc) {
     vars["--r-display"] = "";
   }
 
+  // presentation knobs. an empty string removes the property so the layout's own value applies,
+  // which is what makes every one of these an override rather than a replacement
+  const style = doc.settings.style || {};
+  const step = { tight: 0.72, normal: 1, roomy: 1.38 };
+
+  vars["--r-bullet"] = `"${(BULLETS.find((b) => b.id === style.bullet) || BULLETS[0]).glyph}"`;
+  vars["--r-bullet-gap"] = style.bullet === "none" ? "0pt" : "10pt";
+  vars["--r-gap-scale"] = String(step[style.sectionSpace] ?? 1);
+  vars["--r-entry-scale"] = String(step[style.entrySpace] ?? 1);
+  vars["--r-bullet-scale"] = String(step[style.bulletSpace] ?? 1);
+  vars["--r-lead-scale"] = String(style.lineHeight || 1);
+  vars["--r-tracking"] = `${style.letterSpacing || 0}em`;
+  vars["--r-head-scale"] = String(style.headingScale || 1);
+  vars["--r-ink"] = style.colors?.body || "";
+  vars["--r-accent"] = style.colors?.heading || "";
+  vars["--r-rule-forced"] = style.colors?.divider || "";
+  vars["--r-accent-tint"] = style.colors?.accent || "";
+
   return vars;
 }
 
@@ -80,6 +99,20 @@ export function activeFontLabel(doc) {
 }
 
 const isTwoColumn = (templateId) => (TEMPLATES.find((t) => t.id === templateId)?.columns || 1) === 2;
+
+// the attributes the stylesheet keys off. shared so the measuring probe and the real page are
+// always styled identically
+function docDataset(doc) {
+  const style = doc.settings.style || {};
+  return {
+    "data-template": doc.template,
+    "data-density": doc.settings.density || "normal",
+    "data-rules": doc.settings.sectionRules || "auto",
+    "data-divider": style.divider || "thin",
+    "data-header": style.headerStyle || "left",
+    "data-align": style.align || "left",
+  };
+}
 
 // every piece of text on the page is edited in place, so each one records where its value lives
 // in the document. preview.js reads these back when the text changes
@@ -127,23 +160,37 @@ function buildContact(section) {
 
 const displayUrl = (url) => String(url).replace(/^https?:\/\//i, "").replace(/^www\./i, "").replace(/\/$/, "");
 
-function buildEntry(item, templateId, sectionId) {
-  const stacked = templateId === "academic" || templateId === "ats";
-  const dates = [item.start, item.end].filter(Boolean).join(" - ");
+// an entry reads as two rows: who and where, then what and when. that is the hierarchy printed
+// resumes use, and it keeps the employer and the role on separate lines instead of running them
+// together with a comma
+function buildEntry(item, doc, sectionId) {
+  const style = doc.settings.style;
+  const dates = formatDateRange(item, style.dateFormat);
+  const location = formatLocation(item.location, style.locationFormat);
   const ids = { section: sectionId, item: item.id };
 
-  const aside = (dates || item.location)
-    ? h("div", { class: "r-entry-aside" },
-        dates && h("span", edit("r-dates", "dates", ids), dates),
-        item.location && h("span", edit("r-loc", "item", { ...ids, field: "location" }), item.location))
-    : null;
+  const titleEl = item.title && h("span", edit("r-title", "item", { ...ids, field: "title" }), item.title);
+  const orgEl = item.org && h("span", edit("r-org", "item", { ...ids, field: "org" }), item.org);
+  const locEl = location && h("span", edit("r-loc", "item", { ...ids, field: "location" }), location);
+  const dateEl = dates && h("span", edit("r-dates", "dates", ids), dates);
+
+  const row = (lead, tail) => h("div", { class: "r-entry-row" },
+    h("span", { class: "r-entry-lead" }, lead),
+    tail ? h("span", { class: "r-entry-tail" }, tail) : null);
+
+  const rows = [];
+  if (orgEl) {
+    rows.push(row(orgEl, locEl));
+    if (titleEl || dateEl) rows.push(row(titleEl, dateEl));
+  } else {
+    // with no organisation the role carries the row, and the location follows the dates
+    rows.push(row(titleEl, dateEl || locEl));
+    if (dateEl && locEl) rows.push(row(null, locEl));
+  }
 
   return h("article", { class: "r-entry" },
-    (item.title || item.org || aside) && h("div", { class: "r-entry-top" },
-      h("div", { class: `r-entry-lead${stacked ? " stacked" : ""}` },
-        item.title && h("span", edit("r-title", "item", { ...ids, field: "title" }), item.title),
-        item.org && h("span", edit("r-org", "item", { ...ids, field: "org" }), item.org)),
-      aside),
+    ...rows,
+    ...governmentRows(item, doc, ids),
     // detail lines keep the line structure they had in the source
     ...metaLines(item).map((line, index) => h("div", edit("r-meta", "meta", { ...ids, index }), line)),
     item.link && h("div", null, h("a", { class: "r-link", href: absoluteUrl(item.link), rel: "noreferrer" }, displayUrl(item.link))),
@@ -156,6 +203,28 @@ function buildEntry(item, templateId, sectionId) {
           .map(([line, index]) => bulletItem(line, { ...ids, index })))
       : null,
   );
+}
+
+// the position detail a federal application expects, printed as its own line so a reviewer can
+// find it without reading the bullets
+function governmentRows(item, doc, ids) {
+  if (!doc.settings.governmentFields) return [];
+
+  const facts = [];
+  if (item.hours) facts.push(["Hours per week", item.hours, "hours"]);
+  if (item.salary) facts.push(["Salary", item.salary, "salary"]);
+  if (item.supervisor) {
+    const contact = item.supervisorContact ? `${item.supervisor} (${item.supervisorContact})` : item.supervisor;
+    facts.push(["Supervisor", contact, "supervisor"]);
+  }
+  if (item.supervisor) facts.push(["May we contact", item.mayContact ? "Yes" : "No", null]);
+  if (!facts.length) return [];
+
+  return [h("div", { class: "r-gov" }, facts.map(([label, value, field]) => h("div", { class: "r-gov-line" },
+    h("span", { class: "r-gov-label" }, `${label}: `),
+    field
+      ? h("span", edit("", "item", { ...ids, field }), value)
+      : h("span", null, value))))];
 }
 
 const absoluteUrl = (url) => (/^https?:\/\//i.test(url) ? url : `https://${url}`);
@@ -190,7 +259,7 @@ function buildSection(section, doc) {
 
   if (section.layout === "entries") {
     for (const item of section.items || []) {
-      const entry = buildEntry(item, doc.template, section.id);
+      const entry = buildEntry(item, doc, section.id);
       body.appendChild(entry);
       units.push(entry);
     }
@@ -264,9 +333,7 @@ export function renderResume(doc, container) {
 
   clear(container);
   container.className = "r-doc";
-  container.dataset.template = doc.template;
-  container.dataset.density = doc.settings.density || "normal";
-  container.dataset.rules = doc.settings.sectionRules || "auto";
+  for (const [key, value] of Object.entries(docDataset(doc))) container.setAttribute(key, value);
   applyVars(container, docStyleVars(doc));
 
   const hasContent = rest.length > 0 || (contactSection && !isEmptyContact(contactSection));
@@ -278,12 +345,10 @@ export function renderResume(doc, container) {
 
   // measure a full-height layout, then cut it into pages
   const host = getMeasureHost(metrics, doc);
-  const probe = h("div", {
-    class: "r-doc",
-    "data-template": doc.template,
-    "data-density": doc.settings.density || "normal",
-    "data-rules": doc.settings.sectionRules || "auto",
-  }, h("div", { class: "r-page" }, h("div", { class: "r-page-inner" })));
+  // the probe must carry exactly the attributes the real page does, or heights are measured
+  // against different styling than the one that ends up on screen
+  const probe = h("div", { class: "r-doc", ...docDataset(doc) },
+    h("div", { class: "r-page" }, h("div", { class: "r-page-inner" })));
   applyVars(probe, docStyleVars(doc));
   probe.querySelector(".r-page").style.minHeight = "0";
   host.appendChild(probe);

@@ -113,6 +113,28 @@ export const SECTION_TYPES = {
     blurb: "Referees or a availability note",
     aliases: ["references", "referees"],
   },
+  clearance: {
+    label: "Security Clearance", layout: "bullets", glyph: "Sc", government: true,
+    blurb: "Level, agency and status",
+    aliases: ["security clearance", "clearance", "clearances", "security clearances"],
+  },
+  ksa: {
+    label: "Competencies", layout: "bullets", glyph: "Ks", government: true,
+    blurb: "KSAs and rated competencies",
+    aliases: ["ksa", "ksas", "competencies", "core competencies", "knowledge skills and abilities",
+      "knowledge skills abilities", "rated competencies", "specialised experience", "specialized experience"],
+  },
+  training: {
+    label: "Training", layout: "bullets", glyph: "Tr", government: true,
+    blurb: "Courses and professional development",
+    aliases: ["training", "professional training", "courses", "professional development", "continuing education"],
+  },
+  affiliations: {
+    label: "Professional Affiliations", layout: "bullets", glyph: "Af",
+    blurb: "Memberships and societies",
+    aliases: ["affiliations", "professional affiliations", "memberships", "professional memberships",
+      "societies", "professional organizations", "professional organisations"],
+  },
   custom: {
     label: "Custom Section", layout: "bullets", glyph: "+",
     blurb: "Anything else you need",
@@ -124,8 +146,8 @@ export const SECTION_TYPES = {
 export const LIBRARY_ORDER = [
   "summary", "experience", "education", "projects", "skills", "leadership",
   "certifications", "awards", "research", "publications", "volunteer",
-  "teaching", "opensource", "languages", "coursework", "patents", "military",
-  "interests", "references", "custom",
+  "teaching", "opensource", "languages", "coursework", "ksa", "clearance",
+  "training", "affiliations", "patents", "military", "interests", "references", "custom",
 ];
 
 // a sensible starting order for a freshly parsed or blank resume
@@ -165,15 +187,84 @@ export const FONT_CHOICES = [
 
 export const fontChoice = (id) => FONT_CHOICES.find((font) => font.id === id) || null;
 
+// each layout is a starting point: it sets the style knobs below, and every one of them stays
+// editable afterwards. `preset` is applied when the layout is chosen, never on every render, so a
+// change the user makes is not overwritten the next time the page repaints
 export const TEMPLATES = [
-  { id: "minimal", name: "Minimal", blurb: "Quiet serif, no rules, lots of air", columns: 1 },
-  { id: "professional", name: "Professional", blurb: "Centred header, classic and safe", columns: 1 },
-  { id: "technical", name: "Technical", blurb: "Dense sans-serif for engineering roles", columns: 1 },
-  { id: "business", name: "Business", blurb: "Traditional serif with a strong rule", columns: 1 },
-  { id: "academic", name: "Academic", blurb: "CV conventions, stacked entries", columns: 1 },
-  { id: "creative", name: "Creative", blurb: "Large name, warm accent, side column", columns: 2 },
-  { id: "ats", name: "ATS Friendly", blurb: "Plain, single column, parser-first", columns: 1 },
-  { id: "sidebar", name: "Sidebar", blurb: "Tinted rail for skills and contact", columns: 2 },
+  { id: "minimal", name: "Minimal", blurb: "Quiet serif, no rules, lots of air", columns: 1, ats: true,
+    preset: { headerStyle: "left", divider: "none", bullet: "circle" } },
+  { id: "professional", name: "Professional", blurb: "Centred header, classic and safe", columns: 1, ats: true,
+    preset: { headerStyle: "center", divider: "thin", bullet: "circle" } },
+  { id: "executive", name: "Executive", blurb: "Wide margins, large name, senior tone", columns: 1, ats: true,
+    preset: { headerStyle: "executive", divider: "accent", bullet: "dash", sectionSpace: "roomy" } },
+  { id: "technical", name: "Technical", blurb: "Dense sans-serif for engineering roles", columns: 1, ats: true,
+    preset: { headerStyle: "left", divider: "minimal", bullet: "dash" } },
+  { id: "business", name: "Business", blurb: "Traditional serif with a strong rule", columns: 1, ats: true,
+    preset: { headerStyle: "center", divider: "thick", bullet: "circle" } },
+  { id: "compact", name: "Compact", blurb: "Tight leading to fit more on one page", columns: 1, ats: true,
+    preset: { headerStyle: "left", divider: "thin", bullet: "dash", sectionSpace: "tight" } },
+  { id: "academic", name: "Academic", blurb: "CV conventions, stacked entries", columns: 1, ats: true,
+    preset: { headerStyle: "center", divider: "thin", bullet: "circle", sectionSpace: "roomy" } },
+  { id: "government", name: "Government / Federal", blurb: "USAJOBS conventions, full position detail", columns: 1, ats: true,
+    preset: { headerStyle: "government", divider: "thick", bullet: "square", sectionSpace: "roomy" } },
+  { id: "healthcare", name: "Healthcare", blurb: "Licences and clinical detail up front", columns: 1, ats: true,
+    preset: { headerStyle: "center", divider: "thin", bullet: "circle" } },
+  { id: "legal", name: "Legal", blurb: "Formal serif, restrained and conventional", columns: 1, ats: true,
+    preset: { headerStyle: "center", divider: "thin", bullet: "circle", sectionSpace: "roomy" } },
+  { id: "ats", name: "ATS Optimized", blurb: "Plain, single column, parser-first", columns: 1, ats: true,
+    preset: { headerStyle: "minimal", divider: "none", bullet: "circle" } },
+  { id: "creative", name: "Creative", blurb: "Large name, warm accent, side column", columns: 2, ats: false,
+    preset: { headerStyle: "modern", divider: "none", bullet: "dash" } },
+  { id: "sidebar", name: "Sidebar", blurb: "Tinted rail for skills and contact", columns: 2, ats: false,
+    preset: { headerStyle: "left", divider: "none", bullet: "circle" } },
+];
+
+export const HEADER_STYLES = [
+  { id: "left", label: "Left aligned" },
+  { id: "center", label: "Centred" },
+  { id: "modern", label: "Modern" },
+  { id: "executive", label: "Executive" },
+  { id: "government", label: "Government" },
+  { id: "minimal", label: "Minimal" },
+];
+
+export const DIVIDERS = [
+  { id: "none", label: "None" },
+  { id: "minimal", label: "Minimal" },
+  { id: "thin", label: "Thin" },
+  { id: "thick", label: "Thick" },
+  { id: "accent", label: "Accent" },
+];
+
+// the glyph is what the page and the exports both use, so a bullet style survives to Word
+export const BULLETS = [
+  { id: "circle", label: "Circle", glyph: "•" },
+  { id: "square", label: "Square", glyph: "▪" },
+  { id: "dash", label: "Dash", glyph: "-" },
+  { id: "arrow", label: "Arrow", glyph: "›" },
+  { id: "none", label: "None", glyph: "" },
+];
+
+export const DATE_FORMATS = [
+  { id: "asWritten", label: "As written" },
+  { id: "monthYear", label: "Month YYYY" },
+  { id: "shortMonthYear", label: "Mon YYYY" },
+  { id: "numeric", label: "MM/YYYY" },
+  { id: "year", label: "YYYY" },
+];
+
+export const LOCATION_FORMATS = [
+  { id: "asWritten", label: "As written" },
+  { id: "cityState", label: "City, ST" },
+  { id: "cityStateLong", label: "City, State" },
+  { id: "stateOnly", label: "State only" },
+  { id: "hidden", label: "Hide" },
+];
+
+export const SPACE_STEPS = [
+  { id: "tight", label: "Tight" },
+  { id: "normal", label: "Normal" },
+  { id: "roomy", label: "Roomy" },
 ];
 
 export const typeInfo = (type) => SECTION_TYPES[type] || SECTION_TYPES.custom;
@@ -189,6 +280,12 @@ export function createItem(patch = {}) {
     meta: "",
     link: "",
     bullets: [],
+    // federal applications ask for these; they render only when government fields are on
+    hours: "",
+    salary: "",
+    supervisor: "",
+    supervisorContact: "",
+    mayContact: true,
     ...patch,
   };
 }
@@ -222,6 +319,74 @@ export function createContact(patch = {}) {
   return { name: "", headline: "", email: "", phone: "", location: "", links: [], ...patch };
 }
 
+// choosing a layout seeds the style knobs it cares about and leaves the rest alone, so a font or
+// a date format the user already picked survives the change
+export function applyTemplate(doc, templateId) {
+  const template = TEMPLATES.find((t) => t.id === templateId);
+  if (!template) return false;
+  doc.template = templateId;
+  Object.assign(doc.settings.style, template.preset || {});
+  if (templateId === "government") doc.settings.governmentFields = true;
+  return true;
+}
+
+export function defaultStyle() {
+  return {
+    headerStyle: "left",
+    divider: "thin",
+    bullet: "circle",
+    dateFormat: "asWritten",
+    locationFormat: "asWritten",
+    sectionSpace: "normal",
+    entrySpace: "normal",
+    bulletSpace: "normal",
+    lineHeight: 1,
+    letterSpacing: 0,
+    headingScale: 1,
+    align: "left",
+    colors: { heading: "", body: "", accent: "", divider: "" },
+  };
+}
+
+const STYLE_ENUMS = {
+  headerStyle: HEADER_STYLES,
+  divider: DIVIDERS,
+  bullet: BULLETS,
+  dateFormat: DATE_FORMATS,
+  locationFormat: LOCATION_FORMATS,
+  sectionSpace: SPACE_STEPS,
+  entrySpace: SPACE_STEPS,
+  bulletSpace: SPACE_STEPS,
+};
+
+// a colour is only accepted in the two forms the picker produces, so a stored document cannot
+// smuggle arbitrary text into a style attribute
+const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
+
+function normalizeStyle(input) {
+  const style = { ...defaultStyle(), ...(input && typeof input === "object" ? input : {}) };
+
+  for (const [key, options] of Object.entries(STYLE_ENUMS)) {
+    if (!options.some((option) => option.id === style[key])) style[key] = defaultStyle()[key];
+  }
+  style.align = ["left", "center"].includes(style.align) ? style.align : "left";
+  style.lineHeight = clampNumber(style.lineHeight, 0.8, 1.6, 1);
+  style.letterSpacing = clampNumber(style.letterSpacing, -0.03, 0.12, 0);
+  style.headingScale = clampNumber(style.headingScale, 0.8, 1.5, 1);
+
+  const colors = style.colors && typeof style.colors === "object" ? style.colors : {};
+  style.colors = {};
+  for (const key of ["heading", "body", "accent", "divider"]) {
+    style.colors[key] = HEX.test(colors[key] || "") ? colors[key] : "";
+  }
+  return style;
+}
+
+const clampNumber = (value, min, max, fallback) => {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.min(max, Math.max(min, number)) : fallback;
+};
+
 export function createDocument(patch = {}) {
   const now = Date.now();
   return {
@@ -243,6 +408,11 @@ export function createDocument(patch = {}) {
       fontOverride: null,
       // horizontal rule under each section heading: follow the layout, or force it on or off
       sectionRules: "auto",
+      // presentation knobs. a layout seeds these when it is chosen; after that they are the
+      // user's, and the renderer reads them rather than hard coding anything per template
+      style: defaultStyle(),
+      // the extra position detail a federal application expects, off unless asked for
+      governmentFields: false,
     },
     sections: [],
     trash: [],
@@ -302,7 +472,8 @@ export function sectionText(section) {
     }
     case "entries":
       for (const item of section.items || []) {
-        parts.push(item.title, item.org, item.location, item.start, item.end, item.meta, item.link, ...(item.bullets || []));
+        parts.push(item.title, item.org, item.location, item.start, item.end, item.meta, item.link,
+          item.hours, item.salary, item.supervisor, ...(item.bullets || []));
       }
       break;
     case "bullets":
@@ -339,6 +510,8 @@ export function normalizeDocument(input) {
   doc.settings.keepFonts = doc.settings.keepFonts !== false;
   doc.settings.fontOverride = fontChoice(doc.settings.fontOverride) ? doc.settings.fontOverride : null;
   if (!["auto", "on", "off"].includes(doc.settings.sectionRules)) doc.settings.sectionRules = "auto";
+  doc.settings.style = normalizeStyle(doc.settings.style);
+  doc.settings.governmentFields = Boolean(doc.settings.governmentFields);
   doc.job = { title: "", company: "", url: "", description: "", ...(doc.job || {}) };
   doc.warnings = Array.isArray(doc.warnings) ? doc.warnings : [];
   doc.trash = Array.isArray(doc.trash) ? doc.trash.slice(0, 40).map(normalizeSection) : [];
@@ -426,6 +599,11 @@ function normalizeSection(input) {
       end: cleanText(item?.end).slice(0, 40),
       meta: tidyDetailLines(item?.meta),
       link: cleanText(item?.link).slice(0, 300),
+      hours: cleanText(item?.hours).slice(0, 40),
+      salary: cleanText(item?.salary).slice(0, 60),
+      supervisor: cleanText(item?.supervisor).slice(0, 120),
+      supervisorContact: cleanText(item?.supervisorContact).slice(0, 120),
+      mayContact: item?.mayContact !== false,
       bullets: (Array.isArray(item?.bullets) ? item.bullets : [])
         .slice(0, 40)
         .map((line) => cleanLine(line).slice(0, 900))

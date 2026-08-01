@@ -578,11 +578,42 @@ export class CardsView {
           this.itemField(section, item, "start", "Start", "May 2025"),
           this.itemField(section, item, "end", "End", "Aug 2025"),
           wrapWide(this.itemField(section, item, "meta", "Detail lines", "GPA 3.8\nDean's List", { multiline: true })),
-          wrapWide(this.itemField(section, item, "link", "Link", "github.com/you/project"))),
+          wrapWide(this.itemField(section, item, "link", "Link", "github.com/you/project")),
+          ...this.governmentFields(section, item)),
         this.buildBulletList(section, item)),
     );
 
     return entry;
+  }
+
+  // the extra position detail a federal application asks for, shown only when it is switched on
+  // so a private sector resume is not cluttered with empty fields
+  governmentFields(section, item) {
+    if (!store.doc.settings.governmentFields) return [];
+    const on = item.mayContact !== false;
+
+    return [
+      this.itemField(section, item, "hours", "Hours per week", "40"),
+      this.itemField(section, item, "salary", "Salary", "GS-07, $52,000/yr"),
+      this.itemField(section, item, "supervisor", "Supervisor", "Dana Reyes"),
+      this.itemField(section, item, "supervisorContact", "Supervisor contact", "(555) 010 2288"),
+      wrapWide(h("button", {
+        class: "switch-row",
+        style: { marginTop: "2px" },
+        onclick: () => {
+          store.commit("Contact permission", (doc) => {
+            const target = doc.sections.find((s) => s.id === section.id);
+            const entry = target?.items.find((i) => i.id === item.id);
+            if (entry) entry.mayContact = !on;
+          });
+          this.rerenderBody(section.id);
+        },
+      },
+        h("span", { class: "switch-body" },
+          h("span", { class: "switch-name" }, "May we contact this supervisor"),
+          h("span", { class: "switch-sub" }, on ? "Yes" : "No")),
+        h("span", { class: "switch", role: "switch", "aria-checked": String(on) }))),
+    ];
   }
 
   // multiline is used for the detail lines, which render one per line and so must keep the

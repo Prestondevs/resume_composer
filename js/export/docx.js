@@ -13,6 +13,19 @@ const inches = (value) => Math.round(value * TWIPS_PER_INCH);
 // detail lines are stored newline separated so each becomes its own paragraph
 const metaLines = (item) => String(item.meta || "").split(/\n+/).map((line) => line.trim()).filter(Boolean);
 
+// federal position detail, printed only when the document asks for it
+function governmentLines(item, doc) {
+  if (!doc?.settings?.governmentFields) return [];
+  const out = [];
+  if (item.hours) out.push(`Hours per week: ${item.hours}`);
+  if (item.salary) out.push(`Salary: ${item.salary}`);
+  if (item.supervisor) {
+    out.push(`Supervisor: ${item.supervisor}${item.supervisorContact ? ` (${item.supervisorContact})` : ""}`);
+    out.push(`May we contact: ${item.mayContact === false ? "No" : "Yes"}`);
+  }
+  return out;
+}
+
 // a bullet whose source carried a trailing column is rebuilt with a real right tab stop, so Word
 // sets the dates against the margin instead of running them into the text
 function bulletParagraph(line, contentWidth) {
@@ -35,9 +48,14 @@ function bulletParagraph(line, contentWidth) {
 const FONT_STACKS = {
   minimal: { body: "Georgia", display: "Georgia" },
   professional: { body: "Georgia", display: "Calibri" },
+  executive: { body: "Georgia", display: "Calibri" },
   technical: { body: "Calibri", display: "Calibri" },
   business: { body: "Georgia", display: "Georgia" },
+  compact: { body: "Calibri", display: "Calibri" },
   academic: { body: "Palatino Linotype", display: "Palatino Linotype" },
+  government: { body: "Arial", display: "Arial" },
+  healthcare: { body: "Georgia", display: "Calibri" },
+  legal: { body: "Times New Roman", display: "Times New Roman" },
   creative: { body: "Calibri", display: "Calibri" },
   ats: { body: "Arial", display: "Arial" },
   sidebar: { body: "Calibri", display: "Calibri" },
@@ -75,7 +93,7 @@ export async function toDocx(doc) {
 
   const body = [];
   for (const section of doc.sections.filter((s) => s.visible)) {
-    body.push(...renderSection(section, contentWidth));
+    body.push(...renderSection(section, contentWidth, doc));
   }
 
   const sectPr = `<w:sectPr>`
@@ -101,7 +119,7 @@ export async function toDocx(doc) {
 
 // content
 
-function renderSection(section, contentWidth) {
+function renderSection(section, contentWidth, doc) {
   if (section.layout === "contact") return renderContact(section.contact || {});
 
   const out = [paragraph({ style: "SectionHeading", runs: [{ text: section.title.toUpperCase() }] })];
@@ -109,19 +127,22 @@ function renderSection(section, contentWidth) {
   if (section.layout === "entries") {
     for (const item of section.items || []) {
       const dates = [item.start, item.end].filter(Boolean).join(" - ");
-      const runs = [];
-      if (item.title) runs.push({ text: item.title, bold: true });
-      if (item.org) runs.push({ text: `${item.title ? ", " : ""}${item.org}` });
-      if (dates || item.location) {
-        runs.push({ tab: true });
-        runs.push({ text: [dates, item.location].filter(Boolean).join(" · "), italic: true });
-      }
-      if (runs.length) {
-        out.push(paragraph({
-          style: "EntryHead",
-          runs,
-          tabs: [{ align: "right", pos: contentWidth }],
-        }));
+      const tabs = [{ align: "right", pos: contentWidth }];
+      const rowOf = (lead, tail, italicTail) => {
+        const runs = [];
+        if (lead) runs.push({ text: lead, bold: true });
+        if (tail) { runs.push({ tab: true }); runs.push({ text: tail, italic: italicTail }); }
+        return runs.length ? paragraph({ style: "EntryHead", runs, tabs }) : null;
+      };
+
+      // the same two rows the page uses, so Word matches the preview
+      const rows = item.org
+        ? [rowOf(item.org, item.location, true), rowOf(item.title, dates, true)]
+        : [rowOf(item.title, dates || item.location, true), dates && item.location ? rowOf("", item.location, true) : null];
+      for (const row of rows) if (row) out.push(row);
+
+      for (const line of governmentLines(item, doc)) {
+        out.push(paragraph({ style: "EntryMeta", runs: [{ text: line }] }));
       }
       for (const detail of metaLines(item)) {
         out.push(paragraph({ style: "EntryMeta", runs: [{ text: detail }] }));

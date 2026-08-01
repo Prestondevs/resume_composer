@@ -1,7 +1,7 @@
 import { h, qs, qsa, icon, announce, clear } from "./lib/dom.js";
 import { debounce, plural, clamp } from "./lib/util.js";
 import { store } from "./store.js";
-import { typeInfo, blankDocument, isSectionEmpty, TEMPLATES } from "./schema.js";
+import { typeInfo, blankDocument, isSectionEmpty, TEMPLATES, applyTemplate } from "./schema.js";
 import { CardsView } from "./ui/cards.js";
 import { PreviewView } from "./ui/preview.js";
 import { PanelHost, TOOL_PANELS } from "./ui/panels.js";
@@ -727,7 +727,7 @@ function buildCommands() {
       subtitle: template.blurb,
       group: "Layouts",
       icon: "layers",
-      run: () => store.commit("Change layout", (d) => { d.template = template.id; }),
+      run: () => store.commit("Change layout", (d) => applyTemplate(d, template.id)),
     });
   }
 

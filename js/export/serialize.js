@@ -10,6 +10,19 @@ const dateRange = (item) => [item.start, item.end].filter(Boolean).join(" - ");
 // detail lines are stored newline separated so they keep the shape they had in the source
 const metaLines = (item) => String(item.meta || "").split(/\n+/).map((l) => l.trim()).filter(Boolean);
 
+// federal position detail, printed only when the document asks for it
+function governmentLines(item, doc) {
+  if (!doc?.settings?.governmentFields) return [];
+  const out = [];
+  if (item.hours) out.push(`Hours per week: ${item.hours}`);
+  if (item.salary) out.push(`Salary: ${item.salary}`);
+  if (item.supervisor) {
+    out.push(`Supervisor: ${item.supervisor}${item.supervisorContact ? ` (${item.supervisorContact})` : ""}`);
+    out.push(`May we contact: ${item.mayContact === false ? "No" : "Yes"}`);
+  }
+  return out;
+}
+
 // a bullet may carry a trailing column that the source set against the right margin. plain text
 // keeps the tab, which is what a parser sees; markdown has no right alignment, so it reads as an
 // aside instead
@@ -42,9 +55,17 @@ export function toPlainText(doc, { width = 0 } = {}) {
 
     if (section.layout === "entries") {
       for (const item of section.items || []) {
-        const head = [item.title, item.org].filter(Boolean).join(", ");
-        const tail = [dateRange(item), item.location].filter(Boolean).join(" | ");
-        if (head || tail) out.push([head, tail].filter(Boolean).join("   "));
+        // the same two rows the page uses: who and where, then what and when
+        if (item.org) {
+          out.push([item.org, item.location].filter(Boolean).join("   "));
+          const role = [item.title, dateRange(item)].filter(Boolean).join("   ");
+          if (role) out.push(role);
+        } else {
+          const role = [item.title, dateRange(item) || item.location].filter(Boolean).join("   ");
+          if (role) out.push(role);
+          if (dateRange(item) && item.location) out.push(item.location);
+        }
+        for (const line of governmentLines(item, doc)) out.push(line);
         for (const detail of metaLines(item)) out.push(detail);
         if (item.link) out.push(item.link);
         for (const bullet of item.bullets || []) out.push(...wrap(`- ${bullet}`, width, "  "));
@@ -114,9 +135,18 @@ export function toMarkdown(doc) {
 
     if (section.layout === "entries") {
       for (const item of section.items || []) {
-        const heading = [item.title && `**${item.title}**`, item.org].filter(Boolean).join(", ");
-        const aside = [dateRange(item), item.location].filter(Boolean).join(" · ");
-        if (heading || aside) out.push([heading, aside && `*${aside}*`].filter(Boolean).join("  \n"));
+        // the same two rows the page uses: who and where, then what and when
+        if (item.org) {
+          out.push([`**${item.org}**`, item.location && `*${item.location}*`].filter(Boolean).join("  \n"));
+          const role = [item.title && `**${item.title}**`, dateRange(item) && `*${dateRange(item)}*`]
+            .filter(Boolean).join("  \n");
+          if (role) out.push(role);
+        } else {
+          const aside = [dateRange(item), item.location].filter(Boolean).join(" · ");
+          const heading = item.title && `**${item.title}**`;
+          if (heading || aside) out.push([heading, aside && `*${aside}*`].filter(Boolean).join("  \n"));
+        }
+        for (const line of governmentLines(item, doc)) out.push(line);
         for (const detail of metaLines(item)) out.push(detail);
         if (item.link) out.push(`[${item.link.replace(/^https?:\/\//, "")}](${absolute(item.link)})`);
         if (item.bullets?.length) {

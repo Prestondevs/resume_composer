@@ -21,9 +21,12 @@
 .r-page-inner {
   font-family: var(--r-body);
   font-size: calc(var(--r-size) * var(--r-scale, 1));
-  line-height: var(--r-lead);
+  line-height: calc(var(--r-lead) * var(--r-lead-scale, 1));
+  letter-spacing: var(--r-tracking, 0);
   color: var(--r-ink);
 }
+
+.r-doc[data-align="center"] .r-head { text-align: center; }
 
 /* contact header */
 
@@ -56,12 +59,14 @@
 
 /* sections */
 
-.r-section { margin-bottom: var(--r-gap); }
+/* the spacing scales multiply whatever the layout set, so a layout keeps its own proportions
+   while the user still controls how open the page feels */
+.r-section { margin-bottom: calc(var(--r-gap) * var(--r-gap-scale, 1)); }
 .r-section:last-child { margin-bottom: 0; }
 
 .r-head {
   font-family: var(--r-display);
-  font-size: calc(var(--r-head) * var(--r-scale, 1));
+  font-size: calc(var(--r-head) * var(--r-scale, 1) * var(--r-head-scale, 1));
   font-weight: 700;
   letter-spacing: 0.09em;
   text-transform: uppercase;
@@ -71,32 +76,46 @@
   border-bottom: 0.75pt solid var(--r-rule);
 }
 
-.r-entry { margin-bottom: var(--r-entry-gap); break-inside: avoid; }
+.r-entry { margin-bottom: calc(var(--r-entry-gap) * var(--r-entry-scale, 1)); break-inside: avoid; }
 .r-entry:last-child { margin-bottom: 0; }
 
-.r-entry-top {
+/* an entry is a stack of two-column rows: employer and place, then role and dates. the tail
+   column is right aligned against the margin the way a printed resume sets it */
+.r-entry-row {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
   gap: 10pt;
 }
 .r-entry-lead { min-width: 0; }
-.r-entry-aside { flex: none; text-align: right; color: var(--r-ink-3); font-size: calc(var(--r-size) * 0.94 * var(--r-scale, 1)); }
+.r-entry-tail {
+  flex: none;
+  text-align: right;
+  white-space: nowrap;
+  color: var(--r-ink-3);
+  font-size: calc(var(--r-size) * 0.94 * var(--r-scale, 1));
+}
 .r-title { font-size: calc(var(--r-title) * var(--r-scale, 1)); font-weight: 700; color: var(--r-ink); }
-.r-org { color: var(--r-ink-2); }
-.r-org::before { content: ", "; color: var(--r-ink-3); }
-.r-entry-lead.stacked .r-org { display: block; font-style: italic; }
-.r-entry-lead.stacked .r-org::before { content: none; }
+.r-org { font-weight: 700; color: var(--r-ink); }
 .r-dates { white-space: nowrap; font-variant-numeric: tabular-nums; }
-.r-loc { display: block; font-style: italic; }
+.r-loc { font-style: italic; }
+
+/* the position detail a federal application asks for */
+.r-gov {
+  margin-top: 1pt;
+  color: var(--r-ink-2);
+  font-size: calc(var(--r-size) * 0.92 * var(--r-scale, 1));
+}
+.r-gov-line { display: block; }
+.r-gov-label { font-weight: 700; color: var(--r-ink); }
 .r-meta { color: var(--r-ink-2); font-size: calc(var(--r-size) * 0.94 * var(--r-scale, 1)); margin-top: 0.5pt; }
 .r-link { color: var(--r-ink-3); font-size: calc(var(--r-size) * 0.9 * var(--r-scale, 1)); text-decoration: none; word-break: break-all; }
 
 .r-bullets { margin-top: 2pt; }
 .r-bullets li {
   position: relative;
-  padding-left: 10pt;
-  margin-bottom: 1.5pt;
+  padding-left: var(--r-bullet-gap, 10pt);
+  margin-bottom: calc(1.5pt * var(--r-bullet-scale, 1));
   color: var(--r-ink-2);
   break-inside: avoid;
 }
@@ -134,7 +153,12 @@
 .r-prose { color: var(--r-ink-2); }
 .r-prose p + p { margin-top: 4pt; }
 
-.r-flat li { position: relative; padding-left: 10pt; color: var(--r-ink-2); margin-bottom: 1.5pt; }
+.r-flat li {
+  position: relative;
+  padding-left: var(--r-bullet-gap, 10pt);
+  color: var(--r-ink-2);
+  margin-bottom: calc(1.5pt * var(--r-bullet-scale, 1));
+}
 .r-flat li::before { content: var(--r-bullet); position: absolute; left: 1pt; color: var(--r-ink-3); }
 
 /* two-column page layout (used by Sidebar and Creative) */
@@ -227,7 +251,7 @@
 [data-template="business"] .r-name { font-weight: 400; letter-spacing: 0.01em; }
 [data-template="business"] .r-contact { padding-bottom: 8pt; border-bottom: 2pt solid var(--r-rule); }
 [data-template="business"] .r-head { border-bottom-width: 0.5pt; letter-spacing: 0.12em; }
-[data-template="business"] .r-entry-aside { font-variant: small-caps; letter-spacing: 0.03em; }
+[data-template="business"] .r-entry-tail { font-variant: small-caps; letter-spacing: 0.03em; }
 
 /* academic */
 
@@ -252,10 +276,10 @@
   font-weight: 600;
   border-bottom-width: 0.5pt;
 }
-[data-template="academic"] .r-entry-top { display: block; }
-[data-template="academic"] .r-entry-aside { text-align: left; display: block; }
-[data-template="academic"] .r-loc { display: inline; font-style: normal; }
-[data-template="academic"] .r-loc::before { content: ", "; }
+/* a CV stacks every part of an entry on its own line rather than setting dates to the right */
+[data-template="academic"] .r-entry-row { display: block; }
+[data-template="academic"] .r-entry-tail { text-align: left; display: block; }
+[data-template="academic"] .r-loc { font-style: normal; }
 
 /* creative */
 
@@ -309,10 +333,10 @@
 [data-template="ats"] .r-contact-line > a { display: block; }
 [data-template="ats"] .r-name { font-weight: 700; letter-spacing: 0; }
 [data-template="ats"] .r-head { border: 0; text-transform: uppercase; letter-spacing: 0; font-weight: 700; margin-bottom: 3pt; }
-[data-template="ats"] .r-entry-top { display: block; }
-[data-template="ats"] .r-entry-aside { text-align: left; display: block; }
-[data-template="ats"] .r-loc { display: inline; font-style: normal; }
-[data-template="ats"] .r-loc::before { content: " | "; }
+/* a parser reads top to bottom, so nothing is set against the right margin */
+[data-template="ats"] .r-entry-row { display: block; }
+[data-template="ats"] .r-entry-tail { text-align: left; display: block; }
+[data-template="ats"] .r-loc { font-style: normal; }
 
 /* sidebar */
 
@@ -379,3 +403,175 @@
 }
 .r-doc[data-rules="off"] .r-head,
 .r-doc[data-rules="off"] .r-contact { border-bottom: 0; }
+
+/* divider style. these come last so they win over whatever the layout set, which is what makes
+   the control an override rather than a suggestion */
+.r-doc[data-divider="none"] .r-head { border-bottom: 0; padding-bottom: 0; }
+.r-doc[data-divider="minimal"] .r-head {
+  border-bottom: 0.5pt solid var(--r-rule-forced, var(--r-rule));
+  padding-bottom: 1.5pt;
+  width: 2.2in;
+  max-width: 100%;
+}
+.r-doc[data-divider="thin"] .r-head {
+  border-bottom: 0.6pt solid var(--r-rule-forced, var(--r-rule));
+  padding-bottom: 2pt;
+}
+.r-doc[data-divider="thick"] .r-head {
+  border-bottom: 1.75pt solid var(--r-rule-forced, var(--r-rule));
+  padding-bottom: 2pt;
+}
+.r-doc[data-divider="accent"] .r-head {
+  border-bottom: 0;
+  border-left: 3pt solid var(--r-accent-tint, var(--r-accent));
+  padding: 1pt 0 1pt 6pt;
+  margin-left: -6pt;
+}
+
+/* header style, independent of the layout */
+.r-doc[data-header="center"] .r-contact { text-align: center; }
+.r-doc[data-header="center"] .r-contact-line { justify-content: center; }
+
+.r-doc[data-header="left"] .r-contact { text-align: left; }
+.r-doc[data-header="left"] .r-contact-line { justify-content: flex-start; }
+
+.r-doc[data-header="minimal"] .r-contact { text-align: left; border-bottom: 0; padding-bottom: 0; }
+.r-doc[data-header="minimal"] .r-contact-line { display: block; }
+.r-doc[data-header="minimal"] .r-contact-line .r-sep { display: none; }
+.r-doc[data-header="minimal"] .r-name { font-weight: 700; letter-spacing: 0; text-transform: none; }
+
+.r-doc[data-header="modern"] .r-contact { text-align: left; }
+.r-doc[data-header="modern"] .r-name {
+  font-size: calc(var(--r-name) * 1.25 * var(--r-scale, 1));
+  font-weight: 300;
+  letter-spacing: -0.03em;
+  text-transform: none;
+}
+.r-doc[data-header="modern"] .r-headline { color: var(--r-accent); font-weight: 500; }
+
+.r-doc[data-header="executive"] .r-contact {
+  text-align: center;
+  padding-bottom: 9pt;
+  border-bottom: 1.5pt solid var(--r-accent);
+}
+.r-doc[data-header="executive"] .r-contact-line { justify-content: center; }
+.r-doc[data-header="executive"] .r-name {
+  font-size: calc(var(--r-name) * 1.12 * var(--r-scale, 1));
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+/* a federal reviewer scans for the name and the contact block first, so both are set plainly and
+   on their own lines rather than run together on one */
+.r-doc[data-header="government"] .r-contact { text-align: center; padding-bottom: 8pt; }
+.r-doc[data-header="government"] .r-name {
+  font-size: calc(var(--r-name) * 0.95 * var(--r-scale, 1));
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.r-doc[data-header="government"] .r-contact-line {
+  display: block;
+  text-align: center;
+  line-height: 1.55;
+}
+.r-doc[data-header="government"] .r-contact-line .r-sep { display: none; }
+.r-doc[data-header="government"] .r-contact-line > span,
+.r-doc[data-header="government"] .r-contact-line > a { display: block; }
+
+/* executive */
+
+.r-doc[data-template="executive"] {
+  --r-body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --r-display: "Segoe UI", Inter, system-ui, sans-serif;
+  --r-size: 10.5pt;
+  --r-lead: 1.46;
+  --r-name: 24pt;
+  --r-head: 10pt;
+  --r-gap: 14pt;
+  --r-entry-gap: 9pt;
+  --r-accent: #1b2530;
+  --r-rule: #1b2530;
+}
+[data-template="executive"] .r-head { letter-spacing: 0.13em; }
+
+/* compact */
+
+.r-doc[data-template="compact"] {
+  --r-body: "Segoe UI", Inter, system-ui, sans-serif;
+  --r-display: var(--r-body);
+  --r-size: 9.5pt;
+  --r-lead: 1.26;
+  --r-name: 17pt;
+  --r-head: 8.5pt;
+  --r-gap: 8pt;
+  --r-entry-gap: 5pt;
+  --r-rule: #c8ccd2;
+}
+[data-template="compact"] .r-head { letter-spacing: 0.1em; margin-bottom: 3pt; }
+[data-template="compact"] .r-bullets { margin-top: 1pt; }
+
+/* healthcare */
+
+.r-doc[data-template="healthcare"] {
+  --r-body: "Source Serif 4", Georgia, serif;
+  --r-display: "Segoe UI", Inter, system-ui, sans-serif;
+  --r-size: 10pt;
+  --r-lead: 1.42;
+  --r-name: 21pt;
+  --r-head: 9.5pt;
+  --r-gap: 12pt;
+  --r-accent: #1d4b52;
+  --r-rule: #9fb9bd;
+}
+[data-template="healthcare"] .r-head { letter-spacing: 0.1em; }
+
+/* legal */
+
+.r-doc[data-template="legal"] {
+  --r-body: "Times New Roman", Times, "Liberation Serif", serif;
+  --r-display: var(--r-body);
+  --r-size: 11pt;
+  --r-lead: 1.44;
+  --r-name: 20pt;
+  --r-head: 10.5pt;
+  --r-gap: 13pt;
+  --r-entry-gap: 8pt;
+  --r-accent: #16181c;
+  --r-rule: #16181c;
+}
+[data-template="legal"] .r-name { font-weight: 400; letter-spacing: 0.05em; text-transform: uppercase; }
+[data-template="legal"] .r-head { letter-spacing: 0.12em; }
+
+/* government and federal
+   USAJOBS is read by a human panel against a rating sheet, so this favours plain headings, full
+   position detail and generous leading over anything decorative */
+
+.r-doc[data-template="government"] {
+  --r-body: Arial, Helvetica, "Liberation Sans", sans-serif;
+  --r-display: var(--r-body);
+  --r-size: 11pt;
+  --r-lead: 1.4;
+  --r-name: 18pt;
+  --r-head: 12pt;
+  --r-title: 11pt;
+  --r-gap: 14pt;
+  --r-entry-gap: 11pt;
+  --r-ink-2: #14161a;
+  --r-ink-3: #2c3138;
+  --r-accent: #14161a;
+  --r-rule: #14161a;
+}
+[data-template="government"] .r-head {
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  padding-bottom: 2.5pt;
+  margin-bottom: 6pt;
+}
+[data-template="government"] .r-entry-row { display: block; }
+[data-template="government"] .r-entry-tail { display: block; text-align: left; white-space: normal; }
+[data-template="government"] .r-loc { font-style: normal; }
+[data-template="government"] .r-org { font-weight: 700; }
+[data-template="government"] .r-title { font-weight: 700; }
+[data-template="government"] .r-bullets li { margin-bottom: 3pt; }
