@@ -33,6 +33,8 @@ class Store {
     this.listeners = new Set();
     this.lastCommit = { key: null, at: 0 };
     this.saveState = "idle";
+    // what the caret is in on the page. transient, never persisted, never in the document
+    this.selection = null;
     this.storageAvailable = true;
 
     this.persist = debounce(() => this.saveNow(), 450);
@@ -165,6 +167,14 @@ class Store {
     this.persist();
     this.notify({ reason: options.reason || "doc-quiet", changed: options.changed });
     return true;
+  }
+
+  // the inspector listens for this; it is deliberately not part of the document so selecting
+  // something never lands in undo
+  setSelection(selection) {
+    const same = JSON.stringify(selection) === JSON.stringify(this.selection);
+    this.selection = selection;
+    if (!same) this.notify({ reason: "selection" });
   }
 
   setUi(patch, options = {}) {

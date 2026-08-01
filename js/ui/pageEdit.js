@@ -8,7 +8,21 @@ import { cleanLine } from "../lib/util.js";
 
 const SEPARATOR = /\s*[-–—]\s*|\s+to\s+/i;
 
-export function attachPageEditing(root, { onEdit, onFocusChange } = {}) {
+// what the caret is currently in, as plain data the inspector can reason about
+export function describeField(field) {
+  if (!field) return null;
+  const { edit: kind, section, item, field: name } = field.dataset;
+  return {
+    kind,
+    sectionId: section || null,
+    itemId: item || null,
+    field: name || null,
+    index: field.dataset.index == null ? null : Number(field.dataset.index),
+    text: field.textContent.trim(),
+  };
+}
+
+export function attachPageEditing(root, { onEdit, onFocusChange, onSelect } = {}) {
   let active = null;
 
   const fieldOf = (node) => node?.closest?.("[data-edit]");
@@ -18,6 +32,7 @@ export function attachPageEditing(root, { onEdit, onFocusChange } = {}) {
     if (!field) return;
     active = field;
     onFocusChange?.(true);
+    onSelect?.(describeField(field));
   });
 
   root.addEventListener("focusout", (event) => {
@@ -34,6 +49,7 @@ export function attachPageEditing(root, { onEdit, onFocusChange } = {}) {
     if (!field) return;
     commit(field, { final: false });
     onEdit?.();
+    onSelect?.(describeField(field));
   });
 
   root.addEventListener("keydown", (event) => {
@@ -63,12 +79,18 @@ export function attachPageEditing(root, { onEdit, onFocusChange } = {}) {
 }
 
 function commit(field, { final }) {
-  const value = cleanLine(field.textContent).trim();
-  const { edit: kind, section: sectionId, item: itemId, field: name } = field.dataset;
-  const index = field.dataset.index == null ? null : Number(field.dataset.index);
+  writeValue(describeField(field), cleanLine(field.textContent).trim(), { final });
+}
+
+// the single write path for a field on the page, shared by typing into it and by the inspector
+// applying a suggestion, so both take the same route through undo
+export function writeValue(descriptor, rawValue, { final = true } = {}) {
+  if (!descriptor) return false;
+  const value = cleanLine(rawValue).trim();
+  const { kind, sectionId, itemId, field: name, index } = descriptor;
   const coalesce = `page:${sectionId}:${itemId || ""}:${name || ""}:${index ?? ""}`;
 
-  store.commit("Edit resume", (doc) => {
+  return store.commit("Edit resume", (doc) => {
     const section = doc.sections.find((s) => s.id === sectionId);
     if (!section) return false;
 

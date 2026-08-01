@@ -11,7 +11,7 @@ const ZOOM_STEPS = [0.5, 0.75, 1, 1.25, 1.5];
 const SEPARATOR = "  ·  ";
 
 export class PreviewView {
-  constructor({ canvas, scroll, atsOut, meta, zoomSelect, zoomIn, zoomOut, modeButtons, onFocusSection, onImport, onStart }) {
+  constructor({ canvas, scroll, atsOut, meta, zoomSelect, zoomIn, zoomOut, modeButtons, onFocusSection, onImport, onStart, onSelect }) {
     this.canvas = canvas;
     this.scroll = scroll;
     this.atsOut = atsOut;
@@ -32,6 +32,7 @@ export class PreviewView {
     this.editing = false;
     this.pendingRepaint = false;
     attachPageEditing(this.canvas, {
+      onSelect,
       onEdit: () => { this.pendingRepaint = true; this.paintMeta(store.doc); },
       onFocusChange: (editing) => {
         this.editing = editing;

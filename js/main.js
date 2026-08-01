@@ -40,6 +40,7 @@ function boot() {
     onFocusSection: (id) => focusSection(id),
     onImport: () => el.fileInput.click(),
     onStart: () => startBlank(),
+    onSelect: (selection) => store.setSelection(selection),
   });
 
   paintIcons();
@@ -186,6 +187,10 @@ function onStoreChange(event) {
       preview.render();
       break;
     case "group":
+      break;
+    // selecting something on the page only concerns the inspector
+    case "selection":
+      if (store.ui.panel === "inspect") panels.render();
       break;
     case "theme":
       applyTheme();

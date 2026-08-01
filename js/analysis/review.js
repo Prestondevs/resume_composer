@@ -1,6 +1,8 @@
 import { sectionText, documentText, isSectionEmpty, sectionCount } from "../schema.js";
 import { analyzeJobDescription, countTerm, canonical, WEAK_OPENERS, VERB_SET, tokenize } from "./keywords.js";
 import { countWords } from "../lib/util.js";
+// one definition of a measured result, shared with the per-bullet writing tools
+import { MEASURABLE } from "./writing.js";
 
 // scoring and suggestions
 // two rules shape everything here. Scores must come with a reason a person can act on, and no
@@ -8,7 +10,6 @@ import { countWords } from "../lib/util.js";
 // content the user already wrote. Adding a skill is only ever proposed as a prompt to the user,
 // never applied automatically
 
-const MEASURABLE = /(\$\s?[\d,.]+|\b\d+(?:\.\d+)?\s?(?:%|percent|x\b)|\b\d[\d,]*\+?\s*(?:users|customers|clients|people|students|hours|days|weeks|months|records|requests|transactions|tickets|lines|tests|queries|rows|models|projects|members|attendees|downloads|installs)\b|\bby\s+\d|\bfrom\s+\d[\d,.]*\s+to\s+\d)/i;
 
 export function reviewDocument(doc) {
   const sections = doc.sections.filter((s) => s.visible);
@@ -532,4 +533,4 @@ function listPhrase(items) {
   return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
 }
 
-export { collectBullets, MEASURABLE };
+export { collectBullets };

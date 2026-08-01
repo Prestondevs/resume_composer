@@ -9,10 +9,12 @@ import {
 import { reviewDocument } from "../analysis/review.js";
 import { activeFontLabel } from "../templates/render.js";
 import { openMenu, promptDialog, confirmDialog } from "./overlay.js";
+import { buildInspector } from "./inspector.js";
 import { toast } from "./toasts.js";
 
 // tabs across the top of the right dock
 export const TOOL_PANELS = [
+  { id: "inspect", label: "Inspect", icon: "target", blurb: "Tools for whatever is selected on the page" },
   { id: "sections", label: "Library", icon: "layers", blurb: "Add or switch on sections" },
   { id: "design", label: "Layout", icon: "wand", blurb: "Layout, page setup and font" },
   { id: "optimize", label: "Optimize", icon: "target", blurb: "Match against a job description" },
@@ -86,6 +88,7 @@ export class PanelHost {
     const panel = store.ui.panel || "sections";
     clear(this.root);
     const builder = {
+      inspect: () => this.buildInspect(),
       sections: () => this.buildSections(),
       design: () => this.buildDesign(),
       optimize: () => this.buildOptimize(),
@@ -100,6 +103,12 @@ export class PanelHost {
     return h("div", { style: { display: "contents" } },
       h("div", { class: "panel-scroll" }, content),
       foot && h("div", { class: "panel-foot" }, foot));
+  }
+
+  // the inspector is rebuilt from the current selection every time, which is cheap because it
+  // only ever describes one field
+  buildInspect() {
+    return this.shell(buildInspector(store.selection, { onRefresh: () => this.render() }));
   }
 
   /* library */
