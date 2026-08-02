@@ -716,6 +716,12 @@ body.is-resizing { cursor: col-resize; user-select: none; }
   transform: translateY(-1px);
 }
 .chip-btn:active { transform: none; }
+/* a chip that reports a current choice rather than offering an action */
+.chip-btn.is-on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
 
 .link-btn {
   justify-self: start;

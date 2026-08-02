@@ -107,7 +107,12 @@ const ICON_PATHS = {
   type: '<path d="M4 6h16M9 6v14h6"/>',
 };
 
-export function icon(name, size = 16, extraClass) {
+// one scale for every icon in the app. picking sizes off this list rather than typing a number
+// keeps the strokes reading at the same weight next to each other; a 12 sitting beside a 13 beside
+// a 15 is the kind of drift that makes an interface feel unconsidered without being obviously wrong
+export const ICON = { sm: 13, md: 15, lg: 18, xl: 22 };
+
+export function icon(name, size = ICON.md, extraClass) {
   const svg = document.createElementNS(SVG_NS, "svg");
   svg.setAttribute("viewBox", "0 0 24 24");
   svg.setAttribute("width", size);

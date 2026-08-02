@@ -18,18 +18,35 @@ export function debounce(fn, wait) {
   return wrapped;
 }
 
+// coalesces repeated calls into one run per frame. a hidden document does not paint, so its
+// animation frames never arrive; without the timer the first queued call would never run and
+// every later one would be dropped as already queued, leaving the view frozen for good
 export function throttleFrame(fn) {
   let queued = false;
   let lastArgs;
-  return (...args) => {
+  let frame = 0;
+  let timer = 0;
+  const run = () => {
+    if (!queued) return;
+    queued = false;
+    cancelAnimationFrame(frame);
+    clearTimeout(timer);
+    fn(...lastArgs);
+  };
+  const wrapped = (...args) => {
     lastArgs = args;
     if (queued) return;
     queued = true;
-    requestAnimationFrame(() => {
-      queued = false;
-      fn(...lastArgs);
-    });
+    frame = requestAnimationFrame(run);
+    timer = setTimeout(run, 120);
   };
+  wrapped.flush = () => run();
+  wrapped.cancel = () => {
+    queued = false;
+    cancelAnimationFrame(frame);
+    clearTimeout(timer);
+  };
+  return wrapped;
 }
 
 export const escapeHtml = (value) =>

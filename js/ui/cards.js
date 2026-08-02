@@ -151,7 +151,7 @@ export class CardsView {
       "aria-expanded": String(open),
       "aria-label": `${open ? "Collapse" : "Expand"} ${section.title}`,
       onclick: () => this.setCollapsed(section, !section.collapsed),
-    }, icon("chevronRight", 14));
+    }, icon("chevronRight", 15));
 
     const name = h("div", {
       class: "card-name",
@@ -393,7 +393,7 @@ export class CardsView {
 
     if (section.confidence < 0.7 && section.note) {
       body.appendChild(h("div", { class: "confidence-note" },
-        icon("warn", 14),
+        icon("warn", 15),
         h("span", null, section.note, " ",
           h("button", {
             onclick: () => store.commit("Confirm section", (doc) => {
@@ -446,16 +446,20 @@ export class CardsView {
       const current = store.section(section.id).contact.links || [];
       current.forEach((link, index) => {
         links.appendChild(h("div", { class: "skill-group" },
+          // a placeholder disappears the moment there is a value, so it cannot be the only name
+          // a screen reader has for the field
           h("input", {
             class: "mini-input",
             value: link.label,
             placeholder: "Label",
+            "aria-label": `Link ${index + 1} label`,
             oninput: (event) => this.editLink(section, index, "label", event.target.value),
           }),
           h("input", {
             class: "mini-input",
             value: link.url,
             placeholder: "github.com/you",
+            "aria-label": `Link ${index + 1} address`,
             oninput: (event) => this.editLink(section, index, "url", event.target.value),
           }),
           h("button", {
@@ -467,7 +471,7 @@ export class CardsView {
               });
               renderLinks();
             },
-          }, icon("x", 14))));
+          }, icon("x", 15))));
       });
       links.appendChild(h("button", {
         class: "add-row",
@@ -558,7 +562,7 @@ export class CardsView {
               });
               this.rerenderBody(section.id);
             },
-          }, icon("copy", 14)),
+          }, icon("copy", 15)),
           h("button", {
             class: "icon-btn sm",
             "aria-label": "Delete entry",
@@ -569,7 +573,7 @@ export class CardsView {
               });
               this.rerenderBody(section.id);
             },
-          }, icon("trash", 14)))),
+          }, icon("trash", 15)))),
       h("div", { class: "entry-body" },
         h("div", { class: "grid-2" },
           wrapWide(this.itemField(section, item, "title", "Title or role", "Software Engineering Intern")),
@@ -775,7 +779,7 @@ export class CardsView {
             });
             this.rerenderBody(section.id);
           },
-        }, icon("x", 14))));
+        }, icon("x", 15))));
     });
 
     list.appendChild(h("button", {

@@ -2,6 +2,7 @@ import { h, clear, icon } from "../lib/dom.js";
 import { countWords, plural } from "../lib/util.js";
 import { store } from "../store.js";
 import { typeInfo, SECTION_TYPES } from "../schema.js";
+import { ruleIsOn } from "../templates/render.js";
 import { diagnose, TRANSFORMS, starCoverage, quantifyPrompts, unusedVerbs } from "../analysis/writing.js";
 import { analyzeJobDescription, countTerm } from "../analysis/keywords.js";
 import { writeValue } from "./pageEdit.js";
@@ -40,6 +41,7 @@ export function buildInspector(selection, { onRefresh }) {
     wrap.appendChild(datesBlock());
   } else if (selection.kind === "sectionTitle") {
     wrap.appendChild(headingBlock(section, selection, onRefresh));
+    wrap.appendChild(ruleBlock(section, onRefresh));
   } else if (selection.kind === "contact") {
     wrap.appendChild(contactBlock(selection));
   } else if (selection.text) {
@@ -299,6 +301,40 @@ function headingBlock(section, selection, onRefresh) {
       : null);
 }
 
+// the line under this one heading, independent of the rest of the document. the same toggle sits
+// on the page itself; this is the discoverable copy
+function ruleBlock(section, onRefresh) {
+  const doc = store.doc;
+  const drawn = ruleIsOn(section, doc);
+  const own = section.rule !== null;
+
+  const choose = (value) => {
+    store.commit("Section line", (d) => {
+      const target = d.sections.find((s) => s.id === section.id);
+      if (!target) return false;
+      target.rule = value;
+    });
+    onRefresh?.();
+  };
+
+  const option = (label, value, active) => h("button", {
+    class: `chip-btn${active ? " is-on" : ""}`,
+    "aria-pressed": String(active),
+    onclick: () => choose(value),
+  }, label);
+
+  return h("div", { class: "inspect-group" },
+    h("span", { class: "label" }, "Line under this heading"),
+    h("div", { class: "inspect-actions" },
+      option("Draw it", true, section.rule === true),
+      option("Drop it", false, section.rule === false),
+      option("Follow the layout", null, !own)),
+    h("p", { class: "inspect-prompt" },
+      own
+        ? `This section has its own setting. The rest of the resume is currently ${(doc.settings.style?.divider || "thin") === "none" ? "drawing no line" : "drawing a line"}.`
+        : `Following the document, which ${drawn ? "draws a line" : "draws no line"}. Change it under Design to move every section at once.`));
+}
+
 function contactBlock(selection) {
   const checks = [];
   const value = selection.text;
@@ -338,7 +374,7 @@ function contactBlock(selection) {
           "data-severity": check.ok ? "ok" : "medium",
         },
           h("div", { class: "inspect-issue-top" },
-            icon(check.ok ? "checkCircle" : "warn", 14),
+            icon(check.ok ? "checkCircle" : "warn", 15),
             h("span", { class: "inspect-issue-label" }, check.label)),
           check.ok ? null : h("p", { class: "inspect-issue-detail" }, check.fail))))
       : h("p", { class: "inspect-prompt" }, "Keep this line short. Everything here competes with the first job for attention."));

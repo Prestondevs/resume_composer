@@ -1,4 +1,4 @@
-import { h, frag, clear } from "../lib/dom.js";
+import { h, frag, clear, icon, ICON } from "../lib/dom.js";
 import { PAGE_SIZES, MARGINS, TEMPLATES, BULLETS, fontChoice } from "../schema.js";
 import { formatDateRange, formatLocation } from "./format.js";
 
@@ -107,7 +107,6 @@ function docDataset(doc) {
   return {
     "data-template": doc.template,
     "data-density": doc.settings.density || "normal",
-    "data-rules": doc.settings.sectionRules || "auto",
     "data-divider": style.divider || "thin",
     "data-header": style.headerStyle || "left",
     "data-align": style.align || "left",
@@ -115,8 +114,9 @@ function docDataset(doc) {
 }
 
 // every piece of text on the page is edited in place, so each one records where its value lives
-// in the document. preview.js reads these back when the text changes
-function edit(className, kind, ids = {}) {
+// in the document. pageEdit.js reads these back when the text changes, and uses the same data to
+// find a field again after a repaint
+function edit(className, kind, ids = {}, placeholder = null) {
   return {
     class: className ? `${className} r-edit` : "r-edit",
     contenteditable: "plaintext-only",
@@ -126,18 +126,49 @@ function edit(className, kind, ids = {}) {
     "data-item": ids.item ?? null,
     "data-field": ids.field ?? null,
     "data-index": ids.index == null ? null : String(ids.index),
+    "data-ph": placeholder,
   };
+}
+
+// an editable slot is rendered whether or not it holds anything, so there is somewhere to click
+// to fill it in. an empty one is hidden until its block is hovered or focused, which keeps a
+// finished resume looking finished
+function slot(tag, className, kind, ids, value, placeholder) {
+  const el = h(tag, edit(className, kind, ids, placeholder), value || null);
+  if (!value) el.dataset.blank = "1";
+  return el;
+}
+
+// a control the editor draws beside a block. it sits outside the text flow so it can never
+// change where the page breaks, and it is dropped from every export
+function lineButton(action, label, ids, glyph = "plus") {
+  return h("button", {
+    class: "r-add",
+    type: "button",
+    tabindex: "-1",
+    "aria-label": label,
+    title: label,
+    "data-line-action": action,
+    "data-section": ids.section ?? null,
+    "data-item": ids.item ?? null,
+  }, icon(glyph, ICON.sm));
 }
 
 // block builders
 
-function buildContact(section) {
+function buildContact(section, doc) {
   const c = section.contact || {};
   const id = section.id;
-  const bits = [];
-  if (c.email) bits.push(h("a", { href: `mailto:${c.email}`, ...edit("", "contact", { section: id, field: "email" }) }, c.email));
-  if (c.phone) bits.push(h("span", edit("", "contact", { section: id, field: "phone" }), c.phone));
-  if (c.location) bits.push(h("span", edit("", "contact", { section: id, field: "location" }), c.location));
+
+  // the three standing details are always offered, because a resume missing an email is the
+  // single most common reason a parser throws one out
+  const bits = [
+    h("a", { href: c.email ? `mailto:${c.email}` : null, ...edit("", "contact", { section: id, field: "email" }, "you@example.com") }, c.email || null),
+    slot("span", "", "contact", { section: id, field: "phone" }, c.phone, "(555) 555-5555"),
+    slot("span", "", "contact", { section: id, field: "location" }, c.location, "City, ST"),
+  ];
+  if (!c.email) bits[0].dataset.blank = "1";
+
   (c.links || []).forEach((link, index) => {
     if (!link.url && !link.label) return;
     const href = /^https?:\/\//i.test(link.url) ? link.url : `https://${link.url}`;
@@ -147,15 +178,36 @@ function buildContact(section) {
 
   const line = h("div", { class: "r-contact-line" });
   bits.forEach((bit, index) => {
-    if (index > 0) line.appendChild(h("span", { class: "r-sep", "aria-hidden": "true" }, "·"));
+    // the dot belongs to the detail that follows it, so hiding an empty detail hides its dot too
+    if (index > 0) {
+      const dot = h("span", { class: "r-sep", "aria-hidden": "true" }, "·");
+      if (bit.dataset.blank) dot.dataset.blank = "1";
+      line.appendChild(dot);
+    }
     line.appendChild(bit);
   });
 
-  return h("header", { class: "r-contact", "data-section": id },
-    c.name && h("div", edit("r-name", "contact", { section: id, field: "name" }), c.name),
-    c.headline && h("div", edit("r-headline", "contact", { section: id, field: "headline" }), c.headline),
-    bits.length ? line : null,
+  const el = h("header", { class: "r-contact", "data-section": id },
+    slot("div", "r-name", "contact", { section: id, field: "name" }, c.name, "Your name"),
+    slot("div", "r-headline", "contact", { section: id, field: "headline" }, c.headline, "Headline"),
+    line,
   );
+
+  const headTools = h("div", { class: "r-head-tools", contenteditable: "false" },
+    h("button", {
+      class: "r-add r-rule-toggle",
+      type: "button",
+      tabindex: "-1",
+      "data-rule-toggle": id,
+      "aria-pressed": String(ruleIsOn(section, doc)),
+      "aria-label": "Line under the header",
+      title: "Line under the header",
+    }, icon("minus", ICON.sm)));
+
+  if (section.rule === true) el.dataset.rule = "on";
+  else if (section.rule === false) el.dataset.rule = "off";
+
+  return { el, headTools };
 }
 
 const displayUrl = (url) => String(url).replace(/^https?:\/\//i, "").replace(/^www\./i, "").replace(/\/$/, "");
@@ -169,39 +221,40 @@ function buildEntry(item, doc, sectionId) {
   const location = formatLocation(item.location, style.locationFormat);
   const ids = { section: sectionId, item: item.id };
 
-  const titleEl = item.title && h("span", edit("r-title", "item", { ...ids, field: "title" }), item.title);
-  const orgEl = item.org && h("span", edit("r-org", "item", { ...ids, field: "org" }), item.org);
-  const locEl = location && h("span", edit("r-loc", "item", { ...ids, field: "location" }), location);
-  const dateEl = dates && h("span", edit("r-dates", "dates", ids), dates);
+  const titleEl = slot("span", "r-title", "item", { ...ids, field: "title" }, item.title, "Role");
+  const orgEl = slot("span", "r-org", "item", { ...ids, field: "org" }, item.org, "Organisation");
+  const locEl = slot("span", "r-loc", "item", { ...ids, field: "location" }, location, "City, ST");
+  const dateEl = slot("span", "r-dates", "dates", ids, dates, "Dates");
 
-  const row = (lead, tail) => h("div", { class: "r-entry-row" },
-    h("span", { class: "r-entry-lead" }, lead),
-    tail ? h("span", { class: "r-entry-tail" }, tail) : null);
+  // the employer leads and the role sits under it, which is the hierarchy printed resumes use.
+  // both rows are always present so an empty half stays clickable; a row with nothing in it at
+  // all is folded away until the entry is hovered
+  const row = (lead, tail) => {
+    const el = h("div", { class: "r-entry-row" },
+      h("span", { class: "r-entry-lead" }, lead),
+      h("span", { class: "r-entry-tail" }, tail));
+    if (!lead.textContent && !tail.textContent) el.dataset.blank = "1";
+    return el;
+  };
 
-  const rows = [];
-  if (orgEl) {
-    rows.push(row(orgEl, locEl));
-    if (titleEl || dateEl) rows.push(row(titleEl, dateEl));
-  } else {
-    // with no organisation the role carries the row, and the location follows the dates
-    rows.push(row(titleEl, dateEl || locEl));
-    if (dateEl && locEl) rows.push(row(null, locEl));
-  }
+  const bullets = item.bullets?.length ? item.bullets : [];
 
-  return h("article", { class: "r-entry" },
-    ...rows,
+  return h("article", { class: "r-entry", "data-item": item.id },
+    row(orgEl, locEl),
+    row(titleEl, dateEl),
     ...governmentRows(item, doc, ids),
     // detail lines keep the line structure they had in the source
     ...metaLines(item).map((line, index) => h("div", edit("r-meta", "meta", { ...ids, index }), line)),
     item.link && h("div", null, h("a", { class: "r-link", href: absoluteUrl(item.link), rel: "noreferrer" }, displayUrl(item.link))),
-    // the index passed through is the one in the stored array, not in the filtered list, so an
-    // edit lands on the right bullet even when blank ones sit between them
-    item.bullets?.some((line) => line.trim())
-      ? h("ul", { class: "r-bullets" }, item.bullets
-          .map((line, index) => [line, index])
-          .filter(([line]) => line.trim())
-          .map(([line, index]) => bulletItem(line, { ...ids, index })))
+    // an empty bullet is still rendered: it is a line the writer has opened and is about to
+    // fill, and dropping it would take the caret with it
+    bullets.length
+      ? h("ul", { class: "r-bullets" }, bullets.map((line, index) => bulletItem(line, { ...ids, index })))
       : null,
+    h("div", { class: "r-entry-tools", contenteditable: "false" },
+      lineButton("add-bullet", "Add a bullet", ids),
+      lineButton("add-entry", "Add an entry below", ids),
+      lineButton("remove-entry", "Delete this entry", ids, "trash")),
   );
 }
 
@@ -235,25 +288,50 @@ export const metaLines = (item) => String(item.meta || "").split("\n").map((line
 // halves are edited separately and recombined around the tab on write back
 export function bulletItem(line, ids) {
   const kind = ids?.item ? "bullet" : "sectionBullet";
-  const at = line.indexOf("\t");
-  if (at === -1) return h("li", edit("", kind, ids), line);
+  const at = String(line).indexOf("\t");
+  if (at === -1) {
+    const li = h("li", edit("", kind, ids, "Write a line"), line || null);
+    if (!line.trim()) li.dataset.blank = "1";
+    return li;
+  }
   return h("li", { class: "has-tail" },
-    h("span", edit("r-bullet-text", kind, { ...ids, field: "text" }), line.slice(0, at).trim()),
+    h("span", edit("r-bullet-text", kind, { ...ids, field: "text" }, "Write a line"), line.slice(0, at).trim()),
     h("span", edit("r-bullet-tail", kind, { ...ids, field: "tail" }), line.slice(at + 1).trim()));
 }
 
 // returns the section element plus the child nodes pagination may split on
 function buildSection(section, doc) {
   if (section.layout === "contact") {
-    const el = buildContact(section);
-    return { el, units: [el] };
+    const { el, headTools } = buildContact(section, doc);
+    return { el, units: [el], headTools, footTools: null };
   }
 
-  const el = h("section", { class: "r-section", "data-section": section.id, "data-type": section.type, "data-jump": "1" });
-  const head = h("h2", edit("r-head", "sectionTitle", { section: section.id }), section.title);
+  const el = h("section", {
+    class: "r-section",
+    "data-section": section.id,
+    "data-type": section.type,
+    "data-jump": "1",
+    // a section may keep or drop the line under its heading regardless of what the layout does
+    "data-rule": section.rule === true ? "on" : section.rule === false ? "off" : null,
+  });
+  const head = h("h2", edit("r-head", "sectionTitle", { section: section.id }, "Section name"), section.title);
   el.appendChild(head);
   const body = h("div", { class: "r-body" });
   el.appendChild(body);
+
+  // the editing controls are built but not attached: the measuring pass must see only the
+  // resume, or the buttons would push the page breaks around
+  const headTools = h("div", { class: "r-head-tools", contenteditable: "false" },
+    h("button", {
+      class: "r-add r-rule-toggle",
+      type: "button",
+      tabindex: "-1",
+      "data-rule-toggle": section.id,
+      "aria-pressed": String(ruleIsOn(section, doc)),
+      "aria-label": "Line under this heading",
+      title: "Line under this heading",
+    }, icon("minus", ICON.sm)));
+  let footTools = null;
 
   const units = [];
 
@@ -263,41 +341,62 @@ function buildSection(section, doc) {
       body.appendChild(entry);
       units.push(entry);
     }
+    footTools = h("div", { class: "r-section-tools", contenteditable: "false" },
+      lineButton("add-entry", "Add an entry", { section: section.id }));
   } else if (section.layout === "bullets") {
     const list = h("ul", { class: "r-flat" });
     (section.bullets || []).forEach((line, index) => {
-      if (!line.trim()) return;
       const li = bulletItem(line, { section: section.id, index });
       list.appendChild(li);
       units.push(li);
     });
     body.appendChild(list);
+    footTools = h("div", { class: "r-section-tools", contenteditable: "false" },
+      lineButton("add-bullet", "Add a line", { section: section.id }));
   } else if (section.layout === "inline") {
-    const groups = (section.groups || [])
-      .map((group, index) => [group, index])
-      .filter(([group]) => group.items?.trim());
+    const groups = (section.groups || []).map((group, index) => [group, index]);
     const hasLabels = groups.some(([group]) => group.label?.trim());
     const wrap = h("div", { class: `r-inline-groups${hasLabels ? "" : " no-labels"}` });
     for (const [group, index] of groups) {
+      const ids = { section: section.id, index };
       const row = h("div", { class: "r-group" },
-        h("span", edit("r-group-label", "group", { section: section.id, index, field: "label" }), group.label || ""),
-        h("span", edit("r-group-items", "group", { section: section.id, index, field: "items" }), group.items));
+        slot("span", "r-group-label", "group", { ...ids, field: "label" }, group.label, "Category"),
+        slot("span", "r-group-items", "group", { ...ids, field: "items" }, group.items, "Comma separated list"));
+      if (!group.label?.trim() && !group.items?.trim()) row.dataset.blank = "1";
       wrap.appendChild(row);
       units.push(row);
     }
     body.appendChild(wrap);
+    footTools = h("div", { class: "r-section-tools", contenteditable: "false" },
+      lineButton("add-group", "Add a row", { section: section.id }));
   } else if (section.layout === "prose") {
     const prose = h("div", { class: "r-prose" });
-    (section.body || "").split(/\n{2,}/).forEach((paragraph, index) => {
-      if (!paragraph.trim()) return;
-      const p = h("p", edit("", "prose", { section: section.id, index }), paragraph.trim());
+    const paragraphs = String(section.body || "").split(/\n{2,}/);
+    (paragraphs.length ? paragraphs : [""]).forEach((paragraph, index) => {
+      const p = h("p", edit("", "prose", { section: section.id, index }, "Write a paragraph"), paragraph.trim() || null);
+      if (!paragraph.trim()) p.dataset.blank = "1";
       prose.appendChild(p);
       units.push(p);
     });
     body.appendChild(prose);
   }
 
-  return { el, head, body, units };
+  return { el, head, body, units, headTools, footTools };
+}
+
+// the controls go on once the page has been cut up, so they land on the shell the reader can
+// actually see rather than on the throwaway element the measuring pass used
+function attachTools(shell, entry, { head = false, foot = false } = {}) {
+  if (head && entry.headTools) shell.appendChild(entry.headTools);
+  if (foot && entry.footTools) (shell.querySelector(".r-body") || shell).appendChild(entry.footTools);
+}
+
+// whether the line under a heading is currently drawn, so the toggle can report its own state.
+// a section that has made its own choice keeps it; otherwise the document-wide divider decides
+export function ruleIsOn(section, doc) {
+  if (section.rule === true) return true;
+  if (section.rule === false) return false;
+  return (doc.settings.style?.divider || "thin") !== "none";
 }
 
 // pagination
@@ -410,6 +509,8 @@ export function renderResume(doc, container) {
 
 function paintPages(doc, container, pages, metrics) {
   const sectionShells = new Map();
+  // where each section ends up last, so its add control goes at the bottom of the right page
+  const lastShell = new Map();
 
   pages.forEach((blocks, pageIndex) => {
     const inner = h("div", { class: "r-page-inner" });
@@ -420,23 +521,32 @@ function paintPages(doc, container, pages, metrics) {
 
     for (const block of blocks) {
       if (!block.unit) {
+        attachTools(block.entry.el, block.entry, { head: true, foot: true });
         inner.appendChild(block.entry.el);
         continue;
       }
       const key = `${block.entry.section.id}:${pageIndex}`;
       let shell = sectionShells.get(key);
       if (!shell) {
+        // the shell has to carry the same attributes the measured element did, or a section
+        // would lose its rule setting the moment it landed on a page
         shell = h("section", {
           class: "r-section",
           "data-section": block.entry.section.id,
           "data-type": block.entry.section.type,
           "data-jump": "1",
+          "data-rule": block.entry.el.getAttribute("data-rule"),
         });
-        if (block.withHead && block.entry.head) shell.appendChild(block.entry.head);
+        if (block.withHead && block.entry.head) {
+          shell.appendChild(block.entry.head);
+          attachTools(shell, block.entry, { head: true });
+        }
         shell.appendChild(h("div", { class: "r-body" }));
         sectionShells.set(key, shell);
+        lastShell.set(block.entry.section.id, { shell, entry: block.entry });
         inner.appendChild(shell);
       }
+      lastShell.set(block.entry.section.id, { shell, entry: block.entry });
       const body = shell.querySelector(".r-body");
       // rebuild the wrapper list element that the unit came from
       const parentTag = block.unit.parentElement?.className || "";
@@ -454,6 +564,9 @@ function paintPages(doc, container, pages, metrics) {
 
     container.appendChild(page);
   });
+
+  // the add control belongs at the end of the section, which may be several pages down
+  for (const { shell, entry } of lastShell.values()) attachTools(shell, entry, { foot: true });
 }
 
 // two-column templates keep the aside on every page and flow the main column
@@ -462,14 +575,20 @@ function renderTwoColumn(doc, container, metrics, contactSection, rest) {
   const asideSections = rest.filter((section) => section.column === 1 || (section.column !== 0 ? false : asideTypes.has(section.type)));
   const mainSections = rest.filter((section) => !asideSections.includes(section));
 
+  const column = (section) => {
+    const built = buildSection(section, doc);
+    attachTools(built.el, built, { head: true, foot: true });
+    return built.el;
+  };
+
   const inner = h("div", { class: "r-page-inner two-col" });
-  if (contactSection) inner.appendChild(buildSection(contactSection, doc).el);
+  if (contactSection) inner.appendChild(column(contactSection));
 
   const aside = h("div", { class: "r-col-aside" });
-  for (const section of asideSections) aside.appendChild(buildSection(section, doc).el);
+  for (const section of asideSections) aside.appendChild(column(section));
 
   const main = h("div", { class: "r-col-main" });
-  for (const section of mainSections) main.appendChild(buildSection(section, doc).el);
+  for (const section of mainSections) main.appendChild(column(section));
 
   inner.append(aside, main);
   const page = h("div", { class: "r-page" }, inner);

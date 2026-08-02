@@ -35,7 +35,7 @@
 .drag-grip {
   display: grid;
   place-items: center;
-  width: 22px;
+  width: 24px;
   align-self: stretch;
   flex: none;
   border-radius: var(--r-sm);
@@ -54,7 +54,8 @@
 .card-toggle {
   display: grid;
   place-items: center;
-  width: 20px; height: 20px;
+  /* 24px is the smallest target WCAG accepts; the glyph inside stays small */
+  width: 24px; height: 24px;
   flex: none;
   border-radius: var(--r-sm);
   color: var(--ink-4);

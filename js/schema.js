@@ -304,6 +304,9 @@ export function createSection(type, patch = {}) {
     column: 0,
     confidence: 1,
     note: "",
+    // the line under this heading: true to draw one, false to drop it, null to do whatever the
+    // rest of the document is doing
+    rule: null,
     items: [],
     bullets: [],
     groups: [],
@@ -406,8 +409,6 @@ export function createDocument(patch = {}) {
       fonts: null,
       keepFonts: true,
       fontOverride: null,
-      // horizontal rule under each section heading: follow the layout, or force it on or off
-      sectionRules: "auto",
       // presentation knobs. a layout seeds these when it is chosen; after that they are the
       // user's, and the renderer reads them rather than hard coding anything per template
       style: defaultStyle(),
@@ -509,7 +510,6 @@ export function normalizeDocument(input) {
   doc.settings.fonts = normalizeFonts(doc.settings.fonts);
   doc.settings.keepFonts = doc.settings.keepFonts !== false;
   doc.settings.fontOverride = fontChoice(doc.settings.fontOverride) ? doc.settings.fontOverride : null;
-  if (!["auto", "on", "off"].includes(doc.settings.sectionRules)) doc.settings.sectionRules = "auto";
   doc.settings.style = normalizeStyle(doc.settings.style);
   doc.settings.governmentFields = Boolean(doc.settings.governmentFields);
   doc.job = { title: "", company: "", url: "", description: "", ...(doc.job || {}) };
@@ -574,6 +574,7 @@ function normalizeSection(input) {
     column: input?.column === 1 ? 1 : 0,
     confidence: typeof input?.confidence === "number" ? Math.min(1, Math.max(0, input.confidence)) : 1,
     note: cleanText(input?.note).slice(0, 200),
+    rule: input?.rule === true || input?.rule === false ? input.rule : null,
   });
 
   if (layout === "contact") {

@@ -115,7 +115,7 @@ export class PanelHost {
 
   buildSections() {
     const search = h("div", { class: "panel-search" },
-      icon("search", 14),
+      icon("search", 15),
       h("input", {
         class: "input",
         type: "search",
@@ -243,9 +243,6 @@ export class PanelHost {
         setting("Spacing", doc.settings.density,
           [["tight", "Tight"], ["normal", "Normal"], ["roomy", "Roomy"]],
           (value) => store.commit("Spacing", (d) => { d.settings.density = value; })),
-        setting("Lines under headings", doc.settings.sectionRules,
-          [["on", "Show"], ["off", "Hide"], ["auto", "Follow the layout"]],
-          (value) => store.commit("Section rules", (d) => { d.settings.sectionRules = value; })),
         setting("Text size", String(doc.settings.scale),
           [["0.9", "Small"], ["0.95", "Compact"], ["1", "Default"], ["1.05", "Large"], ["1.1", "Larger"]],
           (value) => store.commit("Text size", (d) => { d.settings.scale = Number(value); }))));
@@ -268,7 +265,7 @@ export class PanelHost {
         d.settings.style = defaultStyle();
         applyTemplate(d, d.template);
       }),
-    }, icon("restore", 14), "Reset style to the layout");
+    }, icon("restore", 15), "Reset style to the layout");
 
     return this.shell(h("div", null, layouts, style, fonts, spacing, colors, page, government, note), reset);
   }
@@ -288,9 +285,23 @@ export class PanelHost {
   }
 
   buildStyleControls(doc) {
+    // a section that has set its own line no longer follows this control, so say so and offer
+    // the way back rather than leaving the setting looking broken
+    const overridden = doc.sections.filter((section) => section.rule !== null);
+    const clear = overridden.length
+      ? h("button", {
+          class: "btn btn-ghost btn-block",
+          style: { marginTop: "2px" },
+          onclick: () => store.commit("Follow the divider everywhere", (d) => {
+            for (const section of d.sections) section.rule = null;
+          }),
+        }, `${overridden.length} section${overridden.length > 1 ? "s" : ""} set their own line, reset`)
+      : null;
+
     return h("div", { style: { display: "grid", gap: "10px" } },
       this.styleSetting(doc, "Header style", "headerStyle", HEADER_STYLES),
       this.styleSetting(doc, "Section dividers", "divider", DIVIDERS),
+      clear,
       this.styleSetting(doc, "Bullets", "bullet", BULLETS),
       this.styleSetting(doc, "Heading alignment", "align",
         [{ id: "left", label: "Left" }, { id: "center", label: "Centred" }]),
@@ -347,7 +358,7 @@ export class PanelHost {
           title: "Use the layout's colour",
           "aria-label": `Clear ${label}`,
           onclick: () => store.commit("Clear colour", (d) => { d.settings.style.colors[key] = ""; }),
-        }, icon("x", 14)) : null);
+        }, icon("x", 15)) : null);
     };
 
     return h("div", { style: { display: "grid", gap: "4px" } },
@@ -600,7 +611,7 @@ export class PanelHost {
     const foot = h("button", {
       class: "btn btn-ghost btn-block",
       onclick: () => this.duplicateVersion(store.doc),
-    }, icon("copy", 14), "Duplicate this version");
+    }, icon("copy", 15), "Duplicate this version");
 
     return this.shell(h("div", null, list, quick), foot);
   }

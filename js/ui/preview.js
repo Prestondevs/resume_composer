@@ -5,7 +5,7 @@ import { renderResume, renderEmptyState, pageMetrics } from "../templates/render
 import { toPlainText } from "../export/serialize.js";
 import { atsReport } from "../analysis/review.js";
 import { documentText } from "../schema.js";
-import { attachPageEditing } from "./pageEdit.js";
+import { attachPageEditing, restoreCaret, requestCaret, captureCaret } from "./pageEdit.js";
 
 const ZOOM_STEPS = [0.5, 0.75, 1, 1.25, 1.5];
 const SEPARATOR = "  ·  ";
@@ -29,17 +29,22 @@ export class PreviewView {
 
     // typing on the page must not repaint the page, or the caret is lost on every keystroke. the
     // repaint is deferred until focus leaves, and only then if something actually changed
-    this.editing = false;
     this.pendingRepaint = false;
     attachPageEditing(this.canvas, {
       onSelect,
       onEdit: () => { this.pendingRepaint = true; this.paintMeta(store.doc); },
       onFocusChange: (editing) => {
-        this.editing = editing;
         if (!editing && this.pendingRepaint) {
           this.pendingRepaint = false;
           this.render();
         }
+      },
+      // adding or removing a line changes the shape of the page, so it has to be rebuilt now
+      // rather than when focus leaves. the caret was booked against the document before the
+      // rebuild and is placed again on the node that replaces the old one
+      onStructure: () => {
+        this.pendingRepaint = false;
+        this.paint();
       },
     });
 
@@ -57,7 +62,10 @@ export class PreviewView {
       });
     }
 
+    // clicking the margin around a section reveals its card. placing the caret in the text must
+    // not, or every click while writing would yank the panel to a different card
     this.canvas.addEventListener("click", (event) => {
+      if (event.target.closest("[data-edit], [data-line-action], [data-rule-toggle]")) return;
       const section = event.target.closest("[data-jump][data-section]");
       if (!section) return;
       this.onFocusSection?.(section.dataset.section);
@@ -103,8 +111,12 @@ export class PreviewView {
       if (dock.dataset.collapsed === "true") continue;
       widest = Math.max(widest, dock.getBoundingClientRect().width);
     }
+    const stage = this.scroll.clientWidth;
     const gutter = widest ? widest * 2 + 48 : 56;
-    const available = this.scroll.clientWidth - gutter;
+    // on a narrow window the docks can be wider than the stage, which used to leave a negative
+    // width and a page scaled so small it sat off the left edge. they float over the page rather
+    // than displacing it, so past a point it is better to let them overlap than to keep shrinking
+    const available = Math.max(stage - gutter, stage * 0.62);
     return clamp(available / metrics.widthPx, 0.3, 2);
   }
 
@@ -129,17 +141,31 @@ export class PreviewView {
     }
   }
 
-  render() {
-    // a repaint while the caret is on the page would rebuild the node being typed into
-    if (this.editing) {
+  // whether the caret is currently in the page. read from the document rather than tracked in a
+  // flag: a flag kept in step with focus events is wrong the moment one of them is missed, and
+  // being wrong here means rebuilding the node someone is typing into
+  isEditing() {
+    const active = document.activeElement;
+    return Boolean(active && this.canvas.contains(active) && active.closest("[data-edit]"));
+  }
+
+  // `force` is for changes that replace the document rather than adjust it: an import, an undo,
+  // switching version. those have to reach the page even while the caret is in it, or the page
+  // would keep showing a document the app no longer holds
+  render(force = false) {
+    if (!force && this.isEditing()) {
+      // a repaint while the caret is on the page would rebuild the node being typed into
       this.pendingRepaint = true;
       this.paintMeta(store.doc);
       return;
     }
+    if (force) requestCaret(captureCaret(this.canvas));
     this.schedule();
   }
 
   paint() {
+    // a paint queued earlier must not run again after this one and undo the caret it restores
+    this.schedule.cancel();
     const doc = store.doc;
     const view = store.ui.view || "paper";
 
@@ -183,6 +209,9 @@ export class PreviewView {
 
     this.applyZoom();
     this.paintMeta(doc);
+    // the page was just rebuilt from scratch. if an edit booked a caret against the document,
+    // this is where it lands on the node that replaced the one it was in
+    restoreCaret(this.canvas);
   }
 
   paintAts(doc) {

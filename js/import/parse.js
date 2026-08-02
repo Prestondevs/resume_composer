@@ -188,9 +188,9 @@ export function parseResume(extraction, { fileName = "" } = {}) {
   }
 
   // match the shape of the source: a centred name and contact block gets the layout that does
-  // the same, and section rules go on because nearly every real resume separates sections
+  // the same, and a line under each heading because nearly every real resume separates sections
   doc.template = meta.centeredHeader ? "professional" : "minimal";
-  doc.settings.sectionRules = "on";
+  doc.settings.style.divider = "thin";
 
   // carry the source's own line spacing across, so a resume that was set tight enough to fit two
   // pages still fits two pages here

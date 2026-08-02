@@ -390,22 +390,9 @@
 .r-doc[data-density="tight"] { --r-lead: 1.28; --r-gap: 8pt; --r-entry-gap: 5pt; }
 .r-doc[data-density="roomy"] { --r-lead: 1.55; --r-gap: 15pt; --r-entry-gap: 10pt; }
 
-/* a rule under every section heading, forced on or off regardless of the layout. imported
-   documents turn this on because most real resumes separate their sections this way */
-.r-doc[data-rules="on"] .r-head {
-  border-bottom: 0.75pt solid var(--r-rule-forced, #b9bec6);
-  padding-bottom: 2pt;
-  margin-bottom: 5pt;
-}
-.r-doc[data-rules="on"] .r-contact {
-  border-bottom: 0.75pt solid var(--r-rule-forced, #b9bec6);
-  padding-bottom: 7pt;
-}
-.r-doc[data-rules="off"] .r-head,
-.r-doc[data-rules="off"] .r-contact { border-bottom: 0; }
-
-/* divider style. these come last so they win over whatever the layout set, which is what makes
-   the control an override rather than a suggestion */
+/* divider style, one control for the whole document. these come last so they win over whatever
+   the layout set, which is what makes the control an override rather than a suggestion. a single
+   section can still disagree, further down */
 .r-doc[data-divider="none"] .r-head { border-bottom: 0; padding-bottom: 0; }
 .r-doc[data-divider="minimal"] .r-head {
   border-bottom: 0.5pt solid var(--r-rule-forced, var(--r-rule));
@@ -426,6 +413,25 @@
   border-left: 3pt solid var(--r-accent-tint, var(--r-accent));
   padding: 1pt 0 1pt 6pt;
   margin-left: -6pt;
+}
+
+/* a single section may keep or drop its own line whatever the rest of the document does. these
+   come after every global rule above so the per-section choice is the one that survives */
+.r-doc .r-section[data-rule="off"] .r-head {
+  border-bottom: 0;
+  border-left: 0;
+  padding: 0;
+  margin-left: 0;
+}
+.r-doc .r-section[data-rule="on"] .r-head {
+  border-bottom: 0.75pt solid var(--r-rule-forced, var(--r-rule));
+  padding-bottom: 2pt;
+  margin-bottom: 5pt;
+}
+.r-doc .r-contact[data-rule="off"] { border-bottom: 0; padding-bottom: 0; }
+.r-doc .r-contact[data-rule="on"] {
+  border-bottom: 0.75pt solid var(--r-rule-forced, var(--r-rule));
+  padding-bottom: 7pt;
 }
 
 /* header style, independent of the layout */

@@ -1,6 +1,7 @@
 import { writeZip } from "../lib/zip.js";
 import { escapeXml } from "../lib/util.js";
 import { PAGE_SIZES, MARGINS, fontChoice } from "../schema.js";
+import { itemHasContent, writtenLines } from "./serialize.js";
 
 // writes a real .docx rather than an HTML file with a Word extension
 // a DOCX is a ZIP of OOXML parts, so this builds the six parts Word needs and hands them to the
@@ -126,6 +127,8 @@ function renderSection(section, contentWidth, doc) {
 
   if (section.layout === "entries") {
     for (const item of section.items || []) {
+      // an entry the writer has opened but not filled is editing state, not a job
+      if (!itemHasContent(item)) continue;
       const dates = [item.start, item.end].filter(Boolean).join(" - ");
       const tabs = [{ align: "right", pos: contentWidth }];
       const rowOf = (lead, tail, italicTail) => {
@@ -148,16 +151,12 @@ function renderSection(section, contentWidth, doc) {
         out.push(paragraph({ style: "EntryMeta", runs: [{ text: detail }] }));
       }
       if (item.link) out.push(paragraph({ style: "EntryMeta", runs: [{ text: item.link }] }));
-      for (const bullet of item.bullets || []) {
-        if (bullet.trim()) out.push(bulletParagraph(bullet, contentWidth));
-      }
+      for (const bullet of writtenLines(item.bullets)) out.push(bulletParagraph(bullet, contentWidth));
       out.push(paragraph({ style: "Spacer", runs: [] }));
     }
     if (out[out.length - 1]?.includes('w:val="Spacer"')) out.pop();
   } else if (section.layout === "bullets") {
-    for (const line of section.bullets || []) {
-      if (line.trim()) out.push(bulletParagraph(line, contentWidth));
-    }
+    for (const line of writtenLines(section.bullets)) out.push(bulletParagraph(line, contentWidth));
   } else if (section.layout === "inline") {
     for (const group of section.groups || []) {
       if (!group.items?.trim()) continue;

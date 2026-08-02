@@ -136,16 +136,18 @@ function cacheElements() {
 function paintIcons() {
   el.undoBtn.appendChild(icon("undo", 15));
   el.redoBtn.appendChild(icon("restore", 15));
-  el.collapseAllBtn.appendChild(icon("fold", 14));
-  el.zoomIn.appendChild(icon("plus", 14));
-  el.zoomOut.appendChild(icon("minus", 14));
+  el.collapseAllBtn.appendChild(icon("fold", 15));
+  el.zoomIn.appendChild(icon("plus", 15));
+  el.zoomOut.appendChild(icon("minus", 15));
 }
 
 /* rendering */
 
+// used whenever the document has been swapped rather than edited, so the page is repainted even
+// if the caret happens to be sitting in it
 function renderAll() {
   cards.render();
-  preview.render();
+  preview.render(true);
   panels.render();
   paintChrome();
 }
@@ -187,6 +189,8 @@ function onStoreChange(event) {
       preview.render();
       break;
     case "group":
+    // the caller is applyUi, which paints the docks itself
+    case "panel-quiet":
       break;
     // selecting something on the page only concerns the inspector
     case "selection":
@@ -284,7 +288,7 @@ function applyTheme() {
     || (preference === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
   document.documentElement.dataset.theme = dark ? "dark" : "light";
   clear(el.themeBtn);
-  el.themeBtn.appendChild(icon(preference === "system" ? "monitor" : dark ? "moon" : "sun", 16));
+  el.themeBtn.appendChild(icon(preference === "system" ? "monitor" : dark ? "moon" : "sun", 15));
   el.themeBtn.title = `Appearance: ${preference}`;
 }
 
@@ -405,7 +409,20 @@ function toggleDock(side) {
   if (next[key] && side === "right") panels.render();
 }
 
+// the docks float over the page, so on a narrow screen an open pair covers the resume entirely.
+// the rule was only ever applied when a dock was toggled, which left a window opened small, or a
+// desktop session reopened on a phone, showing two panels and no document at all
+function enforceNarrowLayout() {
+  if (!isNarrow()) return false;
+  const { leftOpen, rightOpen } = store.ui;
+  if (leftOpen === false || rightOpen === false) return false;
+  // keep the one the user was last working in; the panel dock is the more specific choice
+  store.setUi({ leftOpen: false }, { reason: "panel-quiet" });
+  return true;
+}
+
 function applyUi() {
+  enforceNarrowLayout();
   const leftOpen = store.ui.leftOpen !== false;
   const rightOpen = store.ui.rightOpen !== false;
 
@@ -901,7 +918,12 @@ window.addEventListener("unhandledrejection", (event) => {
   });
 });
 
-window.addEventListener("resize", debounce(() => preview?.render(), 160));
+// crossing into phone widths has to rearrange the docks, not just rescale the page
+window.addEventListener("resize", debounce(() => {
+  if (!preview) return;
+  if (enforceNarrowLayout()) applyUi();
+  preview.render();
+}, 160));
 
 try {
   boot();

@@ -47,12 +47,19 @@
 
   .print-root a { text-decoration: none; color: inherit; }
 
-  /* the editing affordances are screen only */
+  /* the editing affordances are screen only. the add controls and the unfilled slots are not
+     part of the document, so they must not reach paper even when one was hovered at the moment
+     the print dialog opened */
   .print-root .r-edit {
     background: none !important;
     box-shadow: none !important;
     outline: none !important;
   }
+  .print-root .r-entry-tools,
+  .print-root .r-section-tools,
+  .print-root .r-head-tools { display: none !important; }
+  .print-root [data-blank] { display: none !important; }
+  .print-root .r-edit:empty::before { content: none !important; }
 
   /* some templates rely on a tinted panel; without this the browser drops it */
   .print-root [data-template="sidebar"] .r-col-aside,

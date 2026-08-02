@@ -7,6 +7,14 @@ const visibleSections = (doc) => doc.sections.filter((section) => section.visibl
 
 const dateRange = (item) => [item.start, item.end].filter(Boolean).join(" - ");
 
+// a line the writer has opened but not filled yet belongs to editing, not to the resume. the page
+// shows those so there is somewhere to type; nothing that leaves the app should carry them
+export const writtenLines = (lines) => (lines || []).filter((line) => String(line ?? "").trim());
+export const itemHasContent = (item) => Boolean(
+  item.org || item.title || item.location || item.start || item.end
+  || item.meta || item.link || writtenLines(item.bullets).length,
+);
+
 // detail lines are stored newline separated so they keep the shape they had in the source
 const metaLines = (item) => String(item.meta || "").split(/\n+/).map((l) => l.trim()).filter(Boolean);
 
@@ -55,6 +63,7 @@ export function toPlainText(doc, { width = 0 } = {}) {
 
     if (section.layout === "entries") {
       for (const item of section.items || []) {
+        if (!itemHasContent(item)) continue;
         // the same two rows the page uses: who and where, then what and when
         if (item.org) {
           out.push([item.org, item.location].filter(Boolean).join("   "));
@@ -68,13 +77,11 @@ export function toPlainText(doc, { width = 0 } = {}) {
         for (const line of governmentLines(item, doc)) out.push(line);
         for (const detail of metaLines(item)) out.push(detail);
         if (item.link) out.push(item.link);
-        for (const bullet of item.bullets || []) out.push(...wrap(`- ${bullet}`, width, "  "));
+        for (const bullet of writtenLines(item.bullets)) out.push(...wrap(`- ${bullet}`, width, "  "));
         out.push("");
       }
     } else if (section.layout === "bullets") {
-      for (const line of section.bullets || []) {
-        if (line.trim()) out.push(...wrap(`- ${line}`, width, "  "));
-      }
+      for (const line of writtenLines(section.bullets)) out.push(...wrap(`- ${line}`, width, "  "));
       out.push("");
     } else if (section.layout === "inline") {
       for (const group of section.groups || []) {
@@ -135,6 +142,7 @@ export function toMarkdown(doc) {
 
     if (section.layout === "entries") {
       for (const item of section.items || []) {
+        if (!itemHasContent(item)) continue;
         // the same two rows the page uses: who and where, then what and when
         if (item.org) {
           out.push([`**${item.org}**`, item.location && `*${item.location}*`].filter(Boolean).join("  \n"));
@@ -149,15 +157,16 @@ export function toMarkdown(doc) {
         for (const line of governmentLines(item, doc)) out.push(line);
         for (const detail of metaLines(item)) out.push(detail);
         if (item.link) out.push(`[${item.link.replace(/^https?:\/\//, "")}](${absolute(item.link)})`);
-        if (item.bullets?.length) {
+        const bullets = writtenLines(item.bullets);
+        if (bullets.length) {
           out.push("");
-          for (const bullet of item.bullets) out.push(`- ${escapeMarkdown(bulletAside(bullet))}`);
+          for (const bullet of bullets) out.push(`- ${escapeMarkdown(bulletAside(bullet))}`);
         }
         out.push("");
       }
     } else if (section.layout === "bullets") {
-      for (const line of section.bullets || []) {
-        if (line.trim()) out.push(`- ${escapeMarkdown(bulletAside(line))}`);
+      for (const line of writtenLines(section.bullets)) {
+        out.push(`- ${escapeMarkdown(bulletAside(line))}`);
       }
       out.push("");
     } else if (section.layout === "inline") {

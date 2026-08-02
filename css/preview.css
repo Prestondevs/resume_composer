@@ -9,7 +9,12 @@
   justify-content: center;
   align-items: flex-start;
 }
-.canvas-scroll:focus-visible { outline: none; }
+/* the stage is focusable so the page can be scrolled from the keyboard, which means it has to
+   show that it holds focus. an inset ring reads without overlapping the docks that float on top */
+.canvas-scroll:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--ink-3);
+}
 
 .canvas {
   width: max-content;
@@ -71,37 +76,119 @@
 .r-edit {
   outline: none;
   border-radius: 2px;
-  box-shadow: 0 0 0 0 transparent;
-  transition: background var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
   cursor: text;
+  transition: background var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
 }
-.r-edit:hover { background: rgba(20, 20, 24, 0.055); }
+.r-edit:hover { background: rgba(20, 20, 24, 0.05); }
 .r-edit:focus {
-  background: rgba(20, 20, 24, 0.05);
-  box-shadow: 0 0 0 2px rgba(20, 20, 24, 0.28);
-}
-.r-edit:empty::before {
-  content: attr(data-placeholder);
-  color: rgba(20, 20, 24, 0.35);
+  background: rgba(60, 110, 220, 0.09);
+  box-shadow: 0 0 0 1.5px rgba(60, 110, 220, 0.5);
 }
 a.r-edit { text-decoration: none; }
-/* the whole block highlight would fight the per-field one */
-.r-section[data-jump]:hover:has(.r-edit:hover)::before { background: transparent; }
 
-/* clicking a block in the page focuses its card */
-.r-section { position: relative; }
-.r-section[data-jump] { cursor: pointer; }
+/* an empty slot exists so there is somewhere to click, but a finished resume should not be
+   littered with prompts. it takes no room until its block is hovered or holds the caret */
+[data-blank] {
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-width var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease);
+}
+.r-entry-row[data-blank],
+.r-group[data-blank] { max-width: none; height: 0; }
+
+.r-contact:hover [data-blank],
+.r-contact:focus-within [data-blank],
+.r-entry:hover [data-blank],
+.r-entry:focus-within [data-blank],
+.r-section:hover > .r-body [data-blank],
+.r-section:focus-within > .r-body [data-blank],
+[data-blank]:focus,
+[data-blank]:focus-within {
+  max-width: 22em;
+  height: auto;
+  opacity: 1;
+}
+
+.r-edit:empty::before {
+  content: attr(data-ph);
+  color: rgba(20, 20, 24, 0.34);
+  font-style: normal;
+  font-weight: 400;
+  white-space: nowrap;
+}
+/* a caret needs somewhere to sit even when the prompt is what is showing */
+.r-edit:empty { min-width: 1.5em; display: inline-block; }
+li.r-edit:empty { display: list-item; }
+
+/* clicking a block in the page focuses its card. the marker sits in the margin rather than
+   washing the whole section, which would fight the per-field highlight */
+.r-section, .r-entry, .r-contact { position: relative; }
 .r-section[data-jump]::before {
   content: "";
   position: absolute;
-  inset: -4px -8px;
-  border-radius: 4px;
+  top: 0;
+  bottom: 0;
+  left: -14px;
+  width: 2px;
+  border-radius: 2px;
   background: transparent;
   transition: background var(--dur-fast) var(--ease);
   pointer-events: none;
 }
-.r-section[data-jump]:hover::before { background: rgba(20, 20, 24, 0.05); }
-.r-section.is-linked::before { background: rgba(20, 20, 24, 0.09); }
+.r-section[data-jump]:hover::before { background: rgba(20, 20, 24, 0.16); }
+.r-section.is-linked::before { background: rgba(60, 110, 220, 0.75); }
+
+/* the add and remove controls. they are absolutely positioned so they can never take part in
+   the measured layout, which is what decides where the pages break */
+/* the controls live inside the page, so they shrink with it when the view is zoomed out. sized
+   generously here so they stay usable at the zoom the page fits the stage at */
+.r-add {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--ink-3);
+  box-shadow: var(--shadow-1);
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+}
+.r-add:hover { color: var(--ink); border-color: var(--ink-4); background: var(--surface-2); }
+.r-add:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+
+.r-entry-tools, .r-section-tools, .r-head-tools {
+  position: absolute;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-fast) var(--ease);
+  z-index: 2;
+}
+.r-entry-tools { top: 0; right: -30px; flex-direction: column; }
+.r-head-tools { top: -2px; right: -30px; }
+.r-section-tools { left: 0; bottom: -24px; }
+
+.r-entry:hover > .r-entry-tools,
+.r-entry:focus-within > .r-entry-tools,
+.r-section:hover > .r-head-tools,
+.r-section:focus-within > .r-head-tools,
+.r-contact:hover > .r-head-tools,
+.r-contact:focus-within > .r-head-tools,
+.r-section:hover .r-section-tools,
+.r-section:focus-within .r-section-tools,
+.r-entry-tools:hover, .r-head-tools:hover, .r-section-tools:hover {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* the rule toggle reads as pressed when a line is being drawn */
+.r-rule-toggle[aria-pressed="true"] { color: var(--ink); border-color: var(--ink-4); }
+.r-rule-toggle[aria-pressed="false"] { opacity: 0.6; }
 
 /* ATS text view */
 

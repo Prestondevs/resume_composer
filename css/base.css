@@ -46,11 +46,16 @@
 
   --line: #e4e4e3;
   --line-strong: #d2d2d1;
+  /* one step darker than the hover surface, so a press reads as a distinct state rather than
+     as more of the same hover */
+  --pressed: #e2e2e0;
 
+  /* the muted steps all clear 4.5:1 against the tinted surfaces they actually sit on, not just
+     against white. secondary text stays quieter than primary without becoming unreadable */
   --ink: #17171a;
-  --ink-2: #55555a;
-  --ink-3: #82828a;
-  --ink-4: #a9a9b0;
+  --ink-2: #4a4a51;
+  --ink-3: #5e5e66;
+  --ink-4: #6c6c75;
 
   --accent: #2b2b30;
   --accent-ink: #ffffff;
@@ -83,11 +88,12 @@
 
   --line: #2c2c30;
   --line-strong: #3c3c42;
+  --pressed: #35363a;
 
   --ink: #ededee;
-  --ink-2: #a8a8ae;
-  --ink-3: #7c7c84;
-  --ink-4: #5c5c64;
+  --ink-2: #bcbcc3;
+  --ink-3: #9c9ca6;
+  --ink-4: #91919c;
 
   --accent: #e8e8ea;
   --accent-ink: #17171a;
@@ -212,6 +218,21 @@ a { color: var(--ink); text-underline-offset: 2px; }
 
 .btn-block { width: 100%; }
 .btn-lg { height: 36px; padding: 0 16px; font-size: var(--step-0); }
+
+/* pressed feedback. a control that darkens on hover but does nothing on the press itself reads
+   as unresponsive on the click that matters. the shade shifts rather than the box moving, so
+   nothing around the control jumps while it is held */
+.btn:active:not(:disabled),
+.icon-btn:active:not(:disabled),
+.seg-btn:active,
+.dock-tab:active,
+.lib-item:active,
+.group-head:active,
+.chip-btn:active,
+.link-btn:active,
+.card-toggle:active,
+.r-add:active { background: var(--pressed); }
+.btn-primary:active:not(:disabled) { background: color-mix(in oklab, var(--accent) 68%, var(--ink)); }
 
 .icon-btn {
   display: inline-flex;
@@ -428,7 +449,9 @@ kbd {
   position: fixed;
   inset: 0;
   z-index: 150;
-  background: rgba(18, 18, 20, 0.34);
+  /* strong enough to settle the page behind it. below about 40% the background keeps competing
+     with the dialog and the modal stops reading as modal */
+  background: rgba(18, 18, 20, 0.46);
   animation: overlay-in var(--dur) var(--ease) both;
 }
 .scrim.is-out { animation: overlay-out var(--dur-fast) var(--ease) both; }
