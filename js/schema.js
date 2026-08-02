@@ -206,7 +206,8 @@ export const TEMPLATES = [
   { id: "academic", name: "Academic", blurb: "CV conventions, stacked entries", columns: 1, ats: true,
     preset: { headerStyle: "center", divider: "thin", bullet: "circle", sectionSpace: "roomy" } },
   { id: "government", name: "Government / Federal", blurb: "USAJOBS conventions, full position detail", columns: 1, ats: true,
-    preset: { headerStyle: "government", divider: "thick", bullet: "square", sectionSpace: "roomy" } },
+    preset: { headerStyle: "government", divider: "thin", bullet: "circle", sectionSpace: "tight", entrySpace: "tight" },
+    page: { margin: "narrow", density: "tight" } },
   { id: "healthcare", name: "Healthcare", blurb: "Licenses and clinical detail up front", columns: 1, ats: true,
     preset: { headerStyle: "center", divider: "thin", bullet: "circle" } },
   { id: "legal", name: "Legal", blurb: "Formal serif, restrained and conventional", columns: 1, ats: true,
@@ -324,11 +325,15 @@ export function createContact(patch = {}) {
 
 // choosing a layout seeds the style knobs it cares about and leaves the rest alone, so a font or
 // a date format the user already picked survives the change
+// `page` covers the settings that live outside style. a layout only declares one when the
+// measurement is part of the layout rather than a preference, which is why the federal one sets
+// its margins: the text block has to be wide enough to hold a full position description
 export function applyTemplate(doc, templateId) {
   const template = TEMPLATES.find((t) => t.id === templateId);
   if (!template) return false;
   doc.template = templateId;
   Object.assign(doc.settings.style, template.preset || {});
+  for (const [key, value] of Object.entries(template.page || {})) doc.settings[key] = value;
   if (templateId === "government") doc.settings.governmentFields = true;
   return true;
 }

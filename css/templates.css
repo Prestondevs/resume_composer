@@ -386,7 +386,123 @@
 }
 [data-template="sidebar"] .r-page-inner { position: relative; }
 
-/* density control applied on top of any template */
+/* executive */
+
+.r-doc[data-template="executive"] {
+  --r-body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --r-display: "Segoe UI", Inter, system-ui, sans-serif;
+  --r-size: 10.5pt;
+  --r-lead: 1.46;
+  --r-name: 24pt;
+  --r-head: 10pt;
+  --r-gap: 14pt;
+  --r-entry-gap: 9pt;
+  --r-accent: #1b2530;
+  --r-rule: #1b2530;
+}
+[data-template="executive"] .r-head { letter-spacing: 0.13em; }
+
+/* compact */
+
+.r-doc[data-template="compact"] {
+  --r-body: "Segoe UI", Inter, system-ui, sans-serif;
+  --r-display: var(--r-body);
+  --r-size: 9.5pt;
+  --r-lead: 1.26;
+  --r-name: 17pt;
+  --r-head: 8.5pt;
+  --r-gap: 8pt;
+  --r-entry-gap: 5pt;
+  --r-rule: #c8ccd2;
+}
+[data-template="compact"] .r-head { letter-spacing: 0.1em; margin-bottom: 3pt; }
+[data-template="compact"] .r-bullets { margin-top: 1pt; }
+
+/* healthcare */
+
+.r-doc[data-template="healthcare"] {
+  --r-body: "Source Serif 4", Georgia, serif;
+  --r-display: "Segoe UI", Inter, system-ui, sans-serif;
+  --r-size: 10pt;
+  --r-lead: 1.42;
+  --r-name: 21pt;
+  --r-head: 9.5pt;
+  --r-gap: 12pt;
+  --r-accent: #1d4b52;
+  --r-rule: #9fb9bd;
+}
+[data-template="healthcare"] .r-head { letter-spacing: 0.1em; }
+
+/* legal */
+
+.r-doc[data-template="legal"] {
+  --r-body: "Times New Roman", Times, "Liberation Serif", serif;
+  --r-display: var(--r-body);
+  --r-size: 11pt;
+  --r-lead: 1.44;
+  --r-name: 20pt;
+  --r-head: 10.5pt;
+  --r-gap: 13pt;
+  --r-entry-gap: 8pt;
+  --r-accent: #16181c;
+  --r-rule: #16181c;
+}
+[data-template="legal"] .r-name { font-weight: 400; letter-spacing: 0.05em; text-transform: uppercase; }
+[data-template="legal"] .r-head { letter-spacing: 0.12em; }
+
+/* government and federal
+   USAJOBS is read by a human panel against a rating sheet, so this favours plain headings, full
+   position detail and generous leading over anything decorative */
+
+/* modelled on a real federal-track resume rather than on a style guide. the defining trait of
+   that document is that it sets one type size throughout and carries all of its hierarchy on
+   weight and capitals, with a tab stop pushing every location and date range to the right margin.
+   an earlier version of this template stacked those tails on their own left aligned line, which
+   read as a different document entirely and ran the same content to four pages instead of two */
+.r-doc[data-template="government"] {
+  --r-body: Arial, Helvetica, "Liberation Sans", sans-serif;
+  --r-display: var(--r-body);
+  --r-size: 11pt;
+  --r-lead: 1.34;
+  /* one size everywhere. the name and the headings separate themselves by weight and capitals */
+  --r-name: 11pt;
+  --r-head: 11pt;
+  --r-title: 11pt;
+  --r-gap: 9pt;
+  --r-entry-gap: 6pt;
+  --r-ink-2: #14161a;
+  --r-ink-3: #14161a;
+  --r-accent: #14161a;
+  --r-rule: #14161a;
+}
+[data-template="government"] .r-head {
+  letter-spacing: 0.04em;
+  font-weight: 700;
+  padding-bottom: 1.5pt;
+  margin-bottom: 3.5pt;
+}
+/* the two column rows are the whole point of this layout, so they are left exactly as the
+   renderer builds them. location sits against the right margin on the employer row, the date
+   range against it on the role row */
+[data-template="government"] .r-loc { font-style: normal; }
+[data-template="government"] .r-org,
+[data-template="government"] .r-title { font-weight: 700; }
+[data-template="government"] .r-entry-tail { font-size: inherit; }
+[data-template="government"] .r-bullets li { margin-bottom: 1pt; }
+[data-template="government"] .r-meta { font-size: inherit; }
+/* the federal position detail is the one place this template adds rather than mirrors */
+[data-template="government"] .r-gov { font-size: inherit; margin-top: 1.5pt; }
+
+
+/* controls the user drives, applied on top of whatever layout is selected.
+   every one of these has to sit after the last template block. they are overrides, and CSS
+   settles a tie on source order, so a template defined further down the file would quietly win
+   and the control would do nothing. that is exactly what happened to the spacing control on
+   five of the thirteen layouts */
+
+/* spacing, one control for the whole document. this has to come after every template block:
+   a template that sets its own leading and gaps would otherwise win on source order and the
+   control would silently do nothing, which is what it did on five of the thirteen layouts */
 .r-doc[data-density="tight"] { --r-lead: 1.28; --r-gap: 8pt; --r-entry-gap: 5pt; }
 .r-doc[data-density="roomy"] { --r-lead: 1.55; --r-gap: 15pt; --r-entry-gap: 10pt; }
 
@@ -470,114 +586,20 @@
 
 /* a federal reviewer scans for the name and the contact block first, so both are set plainly and
    on their own lines rather than run together on one */
-.r-doc[data-header="government"] .r-contact { text-align: center; padding-bottom: 8pt; }
+.r-doc[data-header="government"] .r-contact { text-align: center; padding-bottom: 5pt; }
 .r-doc[data-header="government"] .r-name {
-  font-size: calc(var(--r-name) * 0.95 * var(--r-scale, 1));
+  font-size: calc(var(--r-name) * var(--r-scale, 1));
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
+/* the details that fit on one line stay on one line, and each profile link takes its own,
+   which is how the source sets it: address and phone together, then LinkedIn, then GitHub */
 .r-doc[data-header="government"] .r-contact-line {
   display: block;
   text-align: center;
-  line-height: 1.55;
+  font-size: inherit;
+  line-height: 1.4;
 }
-.r-doc[data-header="government"] .r-contact-line .r-sep { display: none; }
-.r-doc[data-header="government"] .r-contact-line > span,
-.r-doc[data-header="government"] .r-contact-line > a { display: block; }
-
-/* executive */
-
-.r-doc[data-template="executive"] {
-  --r-body: "Source Serif 4", Georgia, "Times New Roman", serif;
-  --r-display: "Segoe UI", Inter, system-ui, sans-serif;
-  --r-size: 10.5pt;
-  --r-lead: 1.46;
-  --r-name: 24pt;
-  --r-head: 10pt;
-  --r-gap: 14pt;
-  --r-entry-gap: 9pt;
-  --r-accent: #1b2530;
-  --r-rule: #1b2530;
-}
-[data-template="executive"] .r-head { letter-spacing: 0.13em; }
-
-/* compact */
-
-.r-doc[data-template="compact"] {
-  --r-body: "Segoe UI", Inter, system-ui, sans-serif;
-  --r-display: var(--r-body);
-  --r-size: 9.5pt;
-  --r-lead: 1.26;
-  --r-name: 17pt;
-  --r-head: 8.5pt;
-  --r-gap: 8pt;
-  --r-entry-gap: 5pt;
-  --r-rule: #c8ccd2;
-}
-[data-template="compact"] .r-head { letter-spacing: 0.1em; margin-bottom: 3pt; }
-[data-template="compact"] .r-bullets { margin-top: 1pt; }
-
-/* healthcare */
-
-.r-doc[data-template="healthcare"] {
-  --r-body: "Source Serif 4", Georgia, serif;
-  --r-display: "Segoe UI", Inter, system-ui, sans-serif;
-  --r-size: 10pt;
-  --r-lead: 1.42;
-  --r-name: 21pt;
-  --r-head: 9.5pt;
-  --r-gap: 12pt;
-  --r-accent: #1d4b52;
-  --r-rule: #9fb9bd;
-}
-[data-template="healthcare"] .r-head { letter-spacing: 0.1em; }
-
-/* legal */
-
-.r-doc[data-template="legal"] {
-  --r-body: "Times New Roman", Times, "Liberation Serif", serif;
-  --r-display: var(--r-body);
-  --r-size: 11pt;
-  --r-lead: 1.44;
-  --r-name: 20pt;
-  --r-head: 10.5pt;
-  --r-gap: 13pt;
-  --r-entry-gap: 8pt;
-  --r-accent: #16181c;
-  --r-rule: #16181c;
-}
-[data-template="legal"] .r-name { font-weight: 400; letter-spacing: 0.05em; text-transform: uppercase; }
-[data-template="legal"] .r-head { letter-spacing: 0.12em; }
-
-/* government and federal
-   USAJOBS is read by a human panel against a rating sheet, so this favours plain headings, full
-   position detail and generous leading over anything decorative */
-
-.r-doc[data-template="government"] {
-  --r-body: Arial, Helvetica, "Liberation Sans", sans-serif;
-  --r-display: var(--r-body);
-  --r-size: 11pt;
-  --r-lead: 1.4;
-  --r-name: 18pt;
-  --r-head: 12pt;
-  --r-title: 11pt;
-  --r-gap: 14pt;
-  --r-entry-gap: 11pt;
-  --r-ink-2: #14161a;
-  --r-ink-3: #2c3138;
-  --r-accent: #14161a;
-  --r-rule: #14161a;
-}
-[data-template="government"] .r-head {
-  letter-spacing: 0.06em;
-  font-weight: 700;
-  padding-bottom: 2.5pt;
-  margin-bottom: 6pt;
-}
-[data-template="government"] .r-entry-row { display: block; }
-[data-template="government"] .r-entry-tail { display: block; text-align: left; white-space: normal; }
-[data-template="government"] .r-loc { font-style: normal; }
-[data-template="government"] .r-org { font-weight: 700; }
-[data-template="government"] .r-title { font-weight: 700; }
-[data-template="government"] .r-bullets li { margin-bottom: 3pt; }
+.r-doc[data-header="government"] .r-contact-line > a[data-edit="link"] { display: block; }
+.r-doc[data-header="government"] .r-contact-line .r-sep:has(+ a[data-edit="link"]) { display: none; }
