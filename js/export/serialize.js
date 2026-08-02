@@ -1,4 +1,4 @@
-// markdown and plain-text serialisation
+// markdown and plain-text serialization
 // the plain-text form doubles as the ATS preview, so it deliberately mirrors what a naive
 // parser would pull out of the PDF: headings on their own line, no decorative characters, dates
 // written out

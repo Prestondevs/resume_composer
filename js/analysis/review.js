@@ -216,7 +216,7 @@ export function atsReport(doc, sections = doc.sections.filter((s) => s.visible))
   const unknownHeadings = sections.filter((s) => s.type === "custom" && s.title);
   items.push(unknownHeadings.length
     ? { tone: "warn", text: `Non-standard heading${unknownHeadings.length > 1 ? "s" : ""}: ${unknownHeadings.map((s) => `"${s.title}"`).join(", ")}. Parsers key off familiar names like Experience, Education and Skills.` }
-    : { tone: "good", text: "All section headings use recognised names." });
+    : { tone: "good", text: "All section headings use recognized names." });
 
   const entrySections = sections.filter((s) => s.layout === "entries");
   const undated = entrySections.flatMap((s) => (s.items || []).filter((item) => !item.start && !item.end));

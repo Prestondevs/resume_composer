@@ -5,7 +5,7 @@ import { resolveFont } from "./fonts.js";
 // resume classes differ wildly in their macro names and argument order, so this does not try to
 // know them. Formatting macros are unwrapped to their contents, layout macros are dropped, and
 // any remaining multi-argument macro becomes one tab separated line. The section parser then
-// works out which piece is a title, an organisation, a date range or a location from the content
+// works out which piece is a title, an organization, a date range or a location from the content
 // itself, which is the same thing it does for PDF text
 
 // escaped specials are parked under sentinels so later brace and macro stripping cannot
@@ -155,7 +155,7 @@ export function extractLatex(source) {
 
     // emphasis is read before the markers are removed, and a marker anywhere on a line that is
     // not a list item means the line is a heading or an entry title
-    const emphasised = text.includes(BOLD_OPEN);
+    const emphasized = text.includes(BOLD_OPEN);
     text = text.split(BOLD_OPEN).join("").split(BOLD_CLOSE).join("");
 
     text = cleanLine(text).trim().replace(/^\t+|\t+$/g, "").trim();
@@ -165,7 +165,7 @@ export function extractLatex(source) {
     lines.push({
       text,
       size: heading ? 13 : sub ? 11.5 : 10,
-      bold: sub || (!item && emphasised) || (!item && !heading && /\t/.test(text)),
+      bold: sub || (!item && emphasized) || (!item && !heading && /\t/.test(text)),
       allCaps: /^[^a-z]{3,}$/.test(text) && text.length < 46,
       // a custom macro such as \resumeItem loses its \item, so anything inside an itemize with no
       // tab separated fields counts as a list entry too

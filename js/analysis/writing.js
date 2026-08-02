@@ -8,7 +8,7 @@ import { countWords } from "../lib/util.js";
 
 const FILLER = [
   "successfully", "effectively", "efficiently", "various", "several", "a variety of",
-  "in order to", "as needed", "on a daily basis", "on a regular basis", "utilized", "utilised",
+  "in order to", "as needed", "on a daily basis", "on a regular basis", "utilized", "utilized",
   "responsible for", "tasked with", "helped to", "worked to", "served as", "duties included",
   "including but not limited to", "actively", "closely", "heavily", "basically", "really",
   "very", "quite", "extremely", "highly motivated", "hard working", "team player",

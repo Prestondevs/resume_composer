@@ -184,7 +184,7 @@ function markEmphasis(lines, fontUsage) {
   }
 }
 
-// a centred name and contact block is a deliberate design choice, so the layout picked for the
+// a centered name and contact block is a deliberate design choice, so the layout picked for the
 // imported document should match it. measured from geometry rather than guessed from the text
 function detectCenteredHeader(pageLines, pageWidth) {
   if (!pageWidth || pageLines.length < 3) return false;
@@ -193,16 +193,16 @@ function detectCenteredHeader(pageLines, pageWidth) {
   if (header.length < 2) return false;
 
   const middle = pageWidth / 2;
-  let centred = 0;
+  let centered = 0;
   for (const line of header) {
     const width = line.right - line.x;
     if (width > pageWidth * 0.85) continue; // a full width line tells us nothing
     const offset = Math.abs((line.x + line.right) / 2 - middle);
     const leftGap = line.x;
     const rightGap = pageWidth - line.right;
-    if (offset < pageWidth * 0.06 && leftGap > pageWidth * 0.08 && rightGap > pageWidth * 0.08) centred += 1;
+    if (offset < pageWidth * 0.06 && leftGap > pageWidth * 0.08 && rightGap > pageWidth * 0.08) centered += 1;
   }
-  return centred >= 2 && centred >= header.length - 1;
+  return centered >= 2 && centered >= header.length - 1;
 }
 
 async function resolveFontNames(page, fontUsage) {
@@ -282,7 +282,7 @@ function buildLines(runs) {
       text: clean,
       size: Math.max(...visible.map((r) => r.size)),
       bold: boldWidth / totalWidth > 0.6,
-      // capitals separate a section heading from an emphasised entry title, so the section parser
+      // capitals separate a section heading from an emphasized entry title, so the section parser
       // needs this from PDF just as much as from the other readers
       allCaps: /[A-Z]/.test(clean) && !/[a-z]/.test(clean) && clean.length > 2 && clean.length < 46,
       font,

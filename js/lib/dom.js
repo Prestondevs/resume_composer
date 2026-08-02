@@ -68,7 +68,7 @@ export function on(root, type, selector, handler, options) {
   return () => root.removeEventListener(type, listener, options);
 }
 
-// inline SVG icons, sized consistently and inheriting colour
+// inline SVG icons, sized consistently and inheriting color
 const ICON_PATHS = {
   grip: '<circle cx="9" cy="6" r="1.3"/><circle cx="15" cy="6" r="1.3"/><circle cx="9" cy="12" r="1.3"/><circle cx="15" cy="12" r="1.3"/><circle cx="9" cy="18" r="1.3"/><circle cx="15" cy="18" r="1.3"/>',
   chevronRight: '<path d="m9 6 6 6-6 6"/>',

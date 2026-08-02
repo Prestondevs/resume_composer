@@ -33,7 +33,7 @@
   --dur-slow: 320ms;
 }
 
-/* neutral greys only; colour is reserved for score and parser status */
+/* neutral greys only; color is reserved for score and parser status */
 :root,
 :root[data-theme="light"] {
   color-scheme: light;

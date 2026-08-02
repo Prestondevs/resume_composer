@@ -249,7 +249,7 @@ export class PanelHost {
 
     const style = this.group("design-style", "Style", null, () => this.buildStyleControls(doc));
     const spacing = this.group("design-spacing", "Spacing and type", null, () => this.buildSpacingControls(doc));
-    const colors = this.group("design-colors", "Colours", null, () => this.buildColorControls(doc));
+    const colors = this.group("design-colors", "Colors", null, () => this.buildColorControls(doc));
     const government = this.group("design-gov", "Government fields",
       doc.settings.governmentFields ? "On" : null, () => this.buildGovernmentControls(doc));
 
@@ -304,7 +304,7 @@ export class PanelHost {
       clear,
       this.styleSetting(doc, "Bullets", "bullet", BULLETS),
       this.styleSetting(doc, "Heading alignment", "align",
-        [{ id: "left", label: "Left" }, { id: "center", label: "Centred" }]),
+        [{ id: "left", label: "Left" }, { id: "center", label: "Centered" }]),
       this.styleSetting(doc, "Dates", "dateFormat", DATE_FORMATS),
       this.styleSetting(doc, "Locations", "locationFormat", LOCATION_FORMATS));
   }
@@ -355,9 +355,9 @@ export class PanelHost {
           h("span", { class: "swatch-sub" }, value || fallbackNote)),
         value ? h("button", {
           class: "icon-btn sm",
-          title: "Use the layout's colour",
+          title: "Use the layout's color",
           "aria-label": `Clear ${label}`,
-          onclick: () => store.commit("Clear colour", (d) => { d.settings.style.colors[key] = ""; }),
+          onclick: () => store.commit("Clear color", (d) => { d.settings.style.colors[key] = ""; }),
         }, icon("x", 15)) : null);
     };
 
@@ -466,7 +466,7 @@ export class PanelHost {
         field("title", "Job title", "Software Engineer Intern"),
         field("company", "Company", "Acme"),
         field("url", "Link", "acme.com/careers/123"),
-        field("description", "Paste the full description", "Everything is analysed on your device.", true)));
+        field("description", "Paste the full description", "Everything is analyzed on your device.", true)));
 
     const host = h("div");
     const review = this.getReview();

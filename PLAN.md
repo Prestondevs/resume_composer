@@ -47,7 +47,7 @@ The outcomes asked for do not require the framework:
 
 - 60fps animation comes from compositor-only properties (`transform`, `opacity`), which is what
   the current transitions already use.
-- Componentisation is a code organisation question, addressed by splitting the large modules.
+- Componentisation is a code organization question, addressed by splitting the large modules.
 - Avoiding needless re-render is already handled by targeted updates: a text edit repaints one
   card header, not the list.
 

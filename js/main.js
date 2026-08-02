@@ -72,7 +72,7 @@ function playEntrance() {
     [qs(".topbar"), "fade-in-down", 40],
     [el.dockLeft, "fade-in-left", 110],
     [el.dockRight, "fade-in-right", 110],
-    // the view bar is centred with a transform of its own, and a transform based entrance would
+    // the view bar is centered with a transform of its own, and a transform based entrance would
     // replace it for the duration and snap back at the end, so it only fades
     [qs("#viewbar"), "fade-in", 200],
   ];

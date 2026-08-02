@@ -34,7 +34,7 @@ async function detectKind(file) {
   return "text";
 }
 
-// reads a resume file into a normalised document
+// reads a resume file into a normalized document
 // label: string) => void} onProgress
 export async function importFile(file, onProgress = () => {}) {
   if (!file) throw new Error("No file was provided.");

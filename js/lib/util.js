@@ -86,7 +86,7 @@ function normalizeGlyphs(value) {
     .replace(ELLIPSIS, "...");
 }
 
-// normalises the whitespace, dashes, quotes and control characters that PDF and DOCX extraction
+// normalizes the whitespace, dashes, quotes and control characters that PDF and DOCX extraction
 // routinely leave behind
 export function cleanText(value) {
   return normalizeGlyphs(value)
@@ -94,7 +94,7 @@ export function cleanText(value) {
     .replace(/ {2,}/g, " ");
 }
 
-// the same normalisation except tabs survive. the extractors insert a tab wherever the source had
+// the same normalization except tabs survive. the extractors insert a tab wherever the source had
 // a column gap and the section parser reads those as field separators, so flattening them would
 // merge a job title, its dates and its location into one string
 export function cleanLine(value) {

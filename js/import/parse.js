@@ -35,7 +35,7 @@ const URL = /(?:https?:\/\/|www\.)[^\s,;|]+|(?:[\w-]+\.)+(?:com|org|net|io|dev|m
 const BULLET_PREFIX = new RegExp(`^\\s*[${BULLETS}${DASHES}*+]\\s+`);
 const LOCATION_TAIL = /,\s*(?:[A-Z]{2}|[A-Z][a-z]+(?:\s[A-Z][a-z]+)?)\s*$/;
 const REMOTE = /^(?:remote|hybrid|on-?site|virtual)$/i;
-// lines that describe an entry rather than name an organisation
+// lines that describe an entry rather than name an organization
 const DETAIL_LINE = /^(?:cumulative\s+)?(?:gpa|cgpa|grade|honou?rs|dean|major|minor|concentration|coursework|relevant\s+coursework|tech|stack|tools|technologies|skills|languages|advisor|supervisor|thesis)\b/i;
 
 const normalizeHeading = (value) =>
@@ -126,7 +126,7 @@ export function parseResume(extraction, { fileName = "" } = {}) {
   if (!blocks.length && firstHeading === -1) {
     warnings.push({
       level: "warn",
-      title: "No section headings recognised",
+      title: "No section headings recognized",
       detail: "Everything was placed in one block so nothing is lost. Split it into sections from the card menu.",
     });
     const rest = lines.slice(preamble.length);
@@ -187,7 +187,7 @@ export function parseResume(extraction, { fileName = "" } = {}) {
     doc.settings.keepFonts = true;
   }
 
-  // match the shape of the source: a centred name and contact block gets the layout that does
+  // match the shape of the source: a centered name and contact block gets the layout that does
   // the same, and a line under each heading because nearly every real resume separates sections
   doc.template = meta.centeredHeader ? "professional" : "minimal";
   doc.settings.style.divider = "thin";
@@ -245,7 +245,7 @@ function scoreHeadings(lines) {
     else if (findAliasByWords(normalized)) score += 4;
 
     if (line.styleHeading) score += 4;
-    // capitals are the signal that separates a section heading from an emphasised entry title,
+    // capitals are the signal that separates a section heading from an emphasized entry title,
     // since both are usually set in the same heavier font
     if (line.allCaps) score += 3;
     if (medianSize && line.size > medianSize * 1.12) score += 2;
@@ -478,7 +478,7 @@ function chooseLayout(preferred, lines) {
   const dated = lines.filter((line) => DATE_RANGE.test(line.text) || SINGLE_DATE.test(line.text)).length;
   const bulleted = lines.filter((line) => line.listLevel != null || BULLET_PREFIX.test(line.text)).length;
   const labelled = lines.filter((line) => /^[^:]{2,32}:\s*\S/.test(line.text)).length;
-  // an emphasised, unbulleted line is an entry head even when the section carries no dates, which
+  // an emphasized, unbulleted line is an entry head even when the section carries no dates, which
   // is how a projects or involvement section is usually written
   const heads = lines.filter((line) =>
     (line.bold || line.text.includes("\t")) && line.listLevel == null && !BULLET_PREFIX.test(line.text)).length;
@@ -545,7 +545,7 @@ function parseEntries(lines) {
       continue;
     }
 
-    // an undated, multi column row right under a head that still has no organisation is the
+    // an undated, multi column row right under a head that still has no organization is the
     // second row of that head, not a new entry. templates split "role / dates" and "employer /
     // location" across two lines exactly like this. the tab is the giveaway: wrapped prose never
     // carries one, so this cannot swallow a continued bullet
@@ -628,7 +628,7 @@ function extractDates(text) {
 
 // splits a head into columns without cutting inside brackets. a title like "Data Patterns in
 // Unintended RF Emanations (INSURE - NSA)" contains a separator that belongs to the title, and
-// splitting on it strands half the name in the organisation field
+// splitting on it strands half the name in the organization field
 const GUARD = chars(0xe000);
 const COLUMN_SPLIT = new RegExp(`\\s*[|${SEPARATORS}]\\s*|\\s{3,}|\\s+[${DASHES}]\\s+`);
 
@@ -717,7 +717,7 @@ function absorbIntoEntry(item, text) {
   if (parts.length === 1 && isLocation(rest) && !item.location) { item.location = rest; return true; }
 
   // a line sitting under the head is a detail: a GPA, an honour, a tech stack, sometimes the
-  // employer. the organisation slot is filled from the head itself or from the line above, so
+  // employer. the organization slot is filled from the head itself or from the line above, so
   // keeping these as detail lines in source order is what reproduces the original layout
   const at = parts.findIndex((part) => isLocation(part) || REMOTE.test(part));
   if (at !== -1 && !item.location) item.location = parts.splice(at, 1)[0];

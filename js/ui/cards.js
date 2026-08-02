@@ -577,7 +577,7 @@ export class CardsView {
       h("div", { class: "entry-body" },
         h("div", { class: "grid-2" },
           wrapWide(this.itemField(section, item, "title", "Title or role", "Software Engineering Intern")),
-          this.itemField(section, item, "org", "Organisation", "Acme Corp"),
+          this.itemField(section, item, "org", "Organization", "Acme Corp"),
           this.itemField(section, item, "location", "Location", "Austin, TX"),
           this.itemField(section, item, "start", "Start", "May 2025"),
           this.itemField(section, item, "end", "End", "Aug 2025"),

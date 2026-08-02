@@ -222,7 +222,7 @@ function buildEntry(item, doc, sectionId) {
   const ids = { section: sectionId, item: item.id };
 
   const titleEl = slot("span", "r-title", "item", { ...ids, field: "title" }, item.title, "Role");
-  const orgEl = slot("span", "r-org", "item", { ...ids, field: "org" }, item.org, "Organisation");
+  const orgEl = slot("span", "r-org", "item", { ...ids, field: "org" }, item.org, "Organization");
   const locEl = slot("span", "r-loc", "item", { ...ids, field: "location" }, location, "City, ST");
   const dateEl = slot("span", "r-dates", "dates", ids, dates, "Dates");
 

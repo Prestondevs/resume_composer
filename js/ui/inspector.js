@@ -85,7 +85,7 @@ function contextHeader(section, item, selection) {
 }
 
 const fieldLabel = (field) => ({
-  title: "Title", org: "Organisation", location: "Location", name: "Name",
+  title: "Title", org: "Organization", location: "Location", name: "Name",
   headline: "Headline", email: "Email", phone: "Phone", hours: "Hours per week",
   salary: "Salary", supervisor: "Supervisor",
 }[field] || "Field");

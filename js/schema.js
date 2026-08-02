@@ -50,7 +50,7 @@ export const SECTION_TYPES = {
   },
   certifications: {
     label: "Certifications", layout: "bullets", glyph: "Ce",
-    blurb: "Licences and credentials",
+    blurb: "Licenses and credentials",
     aliases: ["certifications", "certificates", "licenses", "licences", "credentials", "certifications & licenses"],
   },
   awards: {
@@ -193,7 +193,7 @@ export const fontChoice = (id) => FONT_CHOICES.find((font) => font.id === id) ||
 export const TEMPLATES = [
   { id: "minimal", name: "Minimal", blurb: "Quiet serif, no rules, lots of air", columns: 1, ats: true,
     preset: { headerStyle: "left", divider: "none", bullet: "circle" } },
-  { id: "professional", name: "Professional", blurb: "Centred header, classic and safe", columns: 1, ats: true,
+  { id: "professional", name: "Professional", blurb: "Centered header, classic and safe", columns: 1, ats: true,
     preset: { headerStyle: "center", divider: "thin", bullet: "circle" } },
   { id: "executive", name: "Executive", blurb: "Wide margins, large name, senior tone", columns: 1, ats: true,
     preset: { headerStyle: "executive", divider: "accent", bullet: "dash", sectionSpace: "roomy" } },
@@ -207,7 +207,7 @@ export const TEMPLATES = [
     preset: { headerStyle: "center", divider: "thin", bullet: "circle", sectionSpace: "roomy" } },
   { id: "government", name: "Government / Federal", blurb: "USAJOBS conventions, full position detail", columns: 1, ats: true,
     preset: { headerStyle: "government", divider: "thick", bullet: "square", sectionSpace: "roomy" } },
-  { id: "healthcare", name: "Healthcare", blurb: "Licences and clinical detail up front", columns: 1, ats: true,
+  { id: "healthcare", name: "Healthcare", blurb: "Licenses and clinical detail up front", columns: 1, ats: true,
     preset: { headerStyle: "center", divider: "thin", bullet: "circle" } },
   { id: "legal", name: "Legal", blurb: "Formal serif, restrained and conventional", columns: 1, ats: true,
     preset: { headerStyle: "center", divider: "thin", bullet: "circle", sectionSpace: "roomy" } },
@@ -221,7 +221,7 @@ export const TEMPLATES = [
 
 export const HEADER_STYLES = [
   { id: "left", label: "Left aligned" },
-  { id: "center", label: "Centred" },
+  { id: "center", label: "Centered" },
   { id: "modern", label: "Modern" },
   { id: "executive", label: "Executive" },
   { id: "government", label: "Government" },
@@ -362,7 +362,7 @@ const STYLE_ENUMS = {
   bulletSpace: SPACE_STEPS,
 };
 
-// a colour is only accepted in the two forms the picker produces, so a stored document cannot
+// a color is only accepted in the two forms the picker produces, so a stored document cannot
 // smuggle arbitrary text into a style attribute
 const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
 

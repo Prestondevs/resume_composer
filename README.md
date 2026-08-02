@@ -83,7 +83,7 @@ On load each region arrives from the edge it sits on, staggered so the page itse
 lands first. The classes are removed once they finish, because the library leaves
 its final transform applied and a settled transform on a dock would create a
 containing block that interferes with dragging and with the collapse transition.
-The view bar is centred with a transform of its own, so it only fades rather than
+The view bar is centered with a transform of its own, so it only fades rather than
 sliding. Everything is skipped under `prefers-reduced-motion`, which the library
 handles itself.
 
